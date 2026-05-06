@@ -322,7 +322,7 @@ export default function App() {
   }
 
   if (auth.role === 'assessor') {
-    return <AssessorView session={{ ...session, code: auth.code }} onBack={() => setAuth(null)} />;
+    return <AssessorView session={{ ...session, code: auth.code }} timelineData={timelineData} onBack={() => setAuth(null)} />;
   }
 
   const isFacilitator = auth.role === 'facilitator';

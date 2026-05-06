@@ -2,11 +2,35 @@ import React, { useState, useMemo } from 'react';
 import { supabase } from './supabase';
 import { categoryMap, scoreDescriptions } from './criteriaMap';
 
-export default function AssessorView({ session, onBack }) {
+export default function AssessorView({ session, timelineData, onBack }) {
   const initialScores = session?.scores || {};
   const [scores, setScores] = useState(initialScores);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
+  const [activeCriteriaInfo, setActiveCriteriaInfo] = useState(null);
+
+  // Map criteria to injects
+  const criteriaToInjectsMap = useMemo(() => {
+    const map = {};
+    if (!timelineData) return map;
+    
+    const processNode = (node) => {
+      if (node.criteria) {
+        node.criteria.forEach(c => {
+          if (!map[c]) map[c] = [];
+          map[c].push(node);
+        });
+      }
+    };
+
+    timelineData.forEach(item => {
+      if (item.type === 'node') processNode(item);
+      if (item.options) {
+        Object.values(item.options).forEach(processNode);
+      }
+    });
+    return map;
+  }, [timelineData]);
 
   const handleScoreChange = (item, score) => {
     setScores(prev => ({ ...prev, [item]: score }));
@@ -78,7 +102,18 @@ export default function AssessorView({ session, onBack }) {
                   return (
                     <div key={item} style={{ paddingBottom: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <p style={{ fontWeight: 'bold', margin: 0 }}>{item}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <p style={{ fontWeight: 'bold', margin: 0 }}>{item}</p>
+                          {criteriaToInjectsMap[item] && (
+                            <button 
+                              onClick={() => setActiveCriteriaInfo(item)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.8, fontSize: '1.2rem' }}
+                              title="View where this can be evidenced"
+                            >
+                              ℹ️
+                            </button>
+                          )}
+                        </div>
                         {currentScore && (
                           <button 
                             onClick={() => handleScoreChange(item, null)} 
@@ -184,6 +219,28 @@ export default function AssessorView({ session, onBack }) {
             {saveStatus === 'error' && <span style={{ color: 'var(--color-red)', fontSize: '0.9rem' }}>Error saving scores.</span>}
           </div>
         </div>
+
+        {activeCriteriaInfo && criteriaToInjectsMap[activeCriteriaInfo] && (
+          <div className="card" style={{ marginTop: '1rem', maxHeight: '50vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <h3 style={{ marginTop: 0, fontSize: '1rem', color: 'var(--color-blue)' }}>Evidence Log</h3>
+              <button onClick={() => setActiveCriteriaInfo(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1.2rem', padding: 0 }}>✕</button>
+            </div>
+            <p style={{ fontSize: '0.85rem', marginBottom: '1rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>{activeCriteriaInfo}</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {criteriaToInjectsMap[activeCriteriaInfo].map(node => (
+                <div key={node.id} style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--text-main)' }}>{node.title} {node.time ? `(${node.time})` : ''}</h4>
+                  <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {node.detail.slice(0, 2).map((d, i) => <li key={i}>{d}</li>)}
+                    {node.detail.length > 2 && <li>...</li>}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
     </div>
