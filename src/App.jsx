@@ -358,17 +358,6 @@ function SnippetView({ activeNode, visibleNodes, isFacilitator, state, exerciseT
                 })}
               </div>
             )}
-
-            {activeNode.id === 'handover' && isFacilitator && !state.isClockRunning && (
-              <div style={{ marginTop: '3rem', textAlign: 'center' }}>
-                <button 
-                  className="btn-start-clock" 
-                  onClick={() => updateState({ isClockRunning: true, clockStartTime: Date.now() })}
-                >
-                  START CLOCKS
-                </button>
-              </div>
-            )}
           </>
         )}
       </div>
@@ -454,15 +443,15 @@ export default function App() {
 
   return (
     <div className="flex-col" style={{ minHeight: '100vh', display: 'flex' }}>
-      <header className="header" style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <header className="header" style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div className="role-badge" style={{ backgroundColor: isFacilitator ? 'var(--color-blue)' : 'var(--color-green)' }}>
             {isFacilitator ? 'Facilitator' : 'Viewer'}
           </div>
-          <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Code: {auth.code}</span>
+          <span className="code-text" style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Code: {auth.code}</span>
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {isFacilitator && (
             <button className="btn btn-danger" onClick={resetExercise}>
               Reset Exercise
@@ -474,21 +463,32 @@ export default function App() {
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Timeline isFacilitator={isFacilitator} state={state} visibleNodes={visibleNodes} exerciseTimeSecs={exerciseTimeSecs} />
         
-        <div className="container" style={{ flex: 1, paddingBottom: '3rem', display: 'flex', gap: '2rem' }}>
+        <div className="container main-layout" style={{ flex: 1, paddingBottom: '3rem' }}>
           {/* Left Panel: Clock */}
-          <div style={{ flex: '0 0 300px' }}>
+          <div className="panel-clock">
             <div className="clock-display">
               {formatTime(exerciseTimeSecs)}
             </div>
+            {activeNodeData?.id === 'handover' && isFacilitator && !state.isClockRunning && (
+              <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                <button 
+                  className="btn-start-clock" 
+                  style={{ width: '100%', marginTop: 0 }}
+                  onClick={() => updateState({ isClockRunning: true, clockStartTime: Date.now() })}
+                >
+                  START CLOCKS
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Middle Panel: Snippet View */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="panel-snippet">
             <SnippetView activeNode={activeNodeData} visibleNodes={visibleNodes} isFacilitator={isFacilitator} state={state} exerciseTimeSecs={exerciseTimeSecs} />
           </div>
 
           {/* Right Panel: Role Players */}
-          <div style={{ flex: '0 0 300px' }}>
+          <div className="panel-roles">
             <div className="role-panel">
               <h3>Role Players</h3>
               <div className="role-list">
