@@ -12,11 +12,12 @@ const defaultState = {
 let globalState = { ...defaultState };
 let currentExerciseCode = null;
 let globalTimelineData = null;
+let globalSessionData = null;
 
 const listeners = new Set();
 
 const notifyListeners = () => {
-  listeners.forEach((listener) => listener({ state: globalState, timelineData: globalTimelineData }));
+  listeners.forEach((listener) => listener({ state: globalState, timelineData: globalTimelineData, session: globalSessionData }));
 };
 
 export const updateState = async (newState) => {
@@ -52,7 +53,7 @@ export const resetExercise = async () => {
 };
 
 export const useStore = (exerciseCode) => {
-  const [data, setData] = useState({ state: globalState, timelineData: globalTimelineData, isLoading: true, error: null });
+  const [data, setData] = useState({ state: globalState, timelineData: globalTimelineData, session: globalSessionData, isLoading: true, error: null });
 
   useEffect(() => {
     if (!exerciseCode) return;
@@ -69,7 +70,7 @@ export const useStore = (exerciseCode) => {
       const { data: sessionData, error } = await supabase
         .from('exercise_sessions')
         .select(`
-          state,
+          state, candidate_name, assessor_1_name, assessor_2_name, scores,
           template_id,
           exercise_templates (
             timeline_data
@@ -87,6 +88,7 @@ export const useStore = (exerciseCode) => {
       }
 
       globalState = sessionData.state || defaultState;
+      globalSessionData = sessionData;
       // Handle the joined relation (Supabase returns object or array depending on relation, here it's an object)
       globalTimelineData = sessionData.exercise_templates?.timeline_data || [];
       notifyListeners();

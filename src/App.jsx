@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { updateState, resetExercise, useStore } from './store';
 import Dashboard from './Dashboard';
+import AssessorView from './AssessorView';
+import { categoryMap } from './criteriaMap';
 
 function TimelineNode({ node, isFacilitator, state, exerciseTimeSecs }) {
   // Determine status
@@ -198,33 +200,6 @@ function SnippetView({ activeNode, visibleNodes, isFacilitator, state, exerciseT
                 {showCriteria && (
                   <div className="criteria-content">
                     {(() => {
-                      const categoryMap = {
-                        'Information Gathering': {
-                           color: '#3b82f6', // blue
-                           items: ["Confirmation of previous actions", "Confirmation of hazards", "Confirmation of risk assessments", "Confirmation of previous role assignments", "Determine suitability and sufficiency of resources", "Determine involvement of other agencies", "Information gathering"]
-                        },
-                        'Incident Evaluation': {
-                           color: '#f59e0b', // yellow
-                           items: ["Resource evaluation", "Risk evaluation", "Obtained professional advice to help evaluate", "Evaluation of impact on the organisation and others"]
-                        },
-                        'Objective Setting and Planning': {
-                           color: '#10b981', // green
-                           items: ["Confirm priority actions and objectives", "Action planning", "Safe systems of work"]
-                        },
-                        'Command and Control': {
-                           color: '#8b5cf6', // purple
-                           items: ["Assuming command", "Control of the incident", "Effective command", "Delegating spans of control", "Use of command support", "Crisis management"]
-                        },
-                        'Communications': {
-                           color: '#ec4899', // pink
-                           items: ["Communication with people", "Transmitting tactical mode", "Senior officer briefing"]
-                        },
-                        'Review': {
-                           color: '#06b6d4', // cyan
-                           items: ["Update of tactical mode", "Review of risk assessment", "Actively monitor the progress of activity against your plan"]
-                        }
-                      };
-
                       // Group the node's criteria by category
                       const grouped = {};
                       activeNode.criteria.forEach(c => {
@@ -308,7 +283,7 @@ function SnippetView({ activeNode, visibleNodes, isFacilitator, state, exerciseT
 
 export default function App() {
   const [auth, setAuth] = useState(null);
-  const { state, timelineData, isLoading, error } = useStore(auth?.code);
+  const { state, timelineData, session, isLoading, error } = useStore(auth?.code);
   const [exerciseTimeSecs, setExerciseTimeSecs] = useState(15 * 3600 + 22 * 60); // 15:22:00
 
   useEffect(() => {
@@ -344,6 +319,10 @@ export default function App() {
         <button className="btn btn-primary" onClick={() => setAuth(null)}>Back to Dashboard</button>
       </div>
     );
+  }
+
+  if (auth.role === 'assessor') {
+    return <AssessorView session={{ ...session, code: auth.code }} onBack={() => setAuth(null)} />;
   }
 
   const isFacilitator = auth.role === 'facilitator';
