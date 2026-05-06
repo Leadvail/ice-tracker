@@ -1,65 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { timelineData } from './data';
 import { updateState, resetExercise, useStore } from './store';
-
-function Login({ onLogin }) {
-  const [code, setCode] = useState('');
-  const [role, setRole] = useState('viewer'); // 'viewer' or 'facilitator'
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!code) return;
-    onLogin({ code, role });
-  };
-
-  return (
-    <div className="login-container">
-      <div className="card login-form">
-        <div style={{ textAlign: 'center' }}>
-          <h2 style={{ marginBottom: '0.5rem' }}>ICE Tracker</h2>
-          <p style={{ color: 'var(--text-muted)' }}>Incident Command Exercise</p>
-        </div>
-        
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Shared Exercise Code</label>
-            <input 
-              type="text" 
-              className="input" 
-              value={code} 
-              onChange={e => setCode(e.target.value)} 
-              placeholder="e.g. HENFIELD-2026"
-            />
-          </div>
-          
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Select Role</label>
-            <div className="role-selector">
-              <button 
-                type="button" 
-                className={`role-btn ${role === 'facilitator' ? 'active' : ''}`}
-                onClick={() => setRole('facilitator')}
-              >
-                Facilitator
-              </button>
-              <button 
-                type="button" 
-                className={`role-btn ${role === 'viewer' ? 'active' : ''}`}
-                onClick={() => setRole('viewer')}
-              >
-                Viewer / Role Player
-              </button>
-            </div>
-          </div>
-
-          <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem' }}>
-            Enter Exercise
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
+import Dashboard from './Dashboard';
 
 function TimelineNode({ node, isFacilitator, state, exerciseTimeSecs }) {
   // Determine status
@@ -367,12 +308,12 @@ function SnippetView({ activeNode, visibleNodes, isFacilitator, state, exerciseT
 
 export default function App() {
   const [auth, setAuth] = useState(null);
-  const state = useStore(auth?.code);
+  const { state, timelineData, isLoading, error } = useStore(auth?.code);
   const [exerciseTimeSecs, setExerciseTimeSecs] = useState(15 * 3600 + 22 * 60); // 15:22:00
 
   useEffect(() => {
     let interval;
-    if (state.isClockRunning && state.clockStartTime) {
+    if (state && state.isClockRunning && state.clockStartTime) {
       interval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - state.clockStartTime) / 1000);
         setExerciseTimeSecs((15 * 3600 + 22 * 60) + elapsed);
@@ -381,10 +322,28 @@ export default function App() {
       setExerciseTimeSecs(15 * 3600 + 22 * 60);
     }
     return () => clearInterval(interval);
-  }, [state.isClockRunning, state.clockStartTime]);
+  }, [state?.isClockRunning, state?.clockStartTime]);
 
   if (!auth) {
-    return <Login onLogin={setAuth} />;
+    return <Dashboard onLogin={setAuth} />;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex-col" style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <h2>Loading Session...</h2>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-col" style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+        <h2 style={{ color: 'var(--color-red)' }}>Error</h2>
+        <p>{error}</p>
+        <button className="btn btn-primary" onClick={() => setAuth(null)}>Back to Dashboard</button>
+      </div>
+    );
   }
 
   const isFacilitator = auth.role === 'facilitator';
@@ -404,11 +363,11 @@ export default function App() {
       }
       return null;
     };
-    activeNodeData = findNode(state.activeNodeId, timelineData);
+    activeNodeData = findNode(state.activeNodeId, timelineData || []);
   }
 
   // Filter timeline based on decisions for conditional nodes
-  const visibleNodes = timelineData.filter(item => {
+  const visibleNodes = (timelineData || []).filter(item => {
     if (item.type === 'conditional') {
       const decision = state.decisions[item.dependsOn];
       if (!decision) return false; // Hide until decision is made
@@ -426,7 +385,7 @@ export default function App() {
 
   // Calculate Role Players
   const rolePlayerMap = {};
-  timelineData.forEach(item => {
+  (timelineData || []).forEach(item => {
     const processNode = (n) => {
       if (n.rolePlayers) {
         n.rolePlayers.forEach(rp => {

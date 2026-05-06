@@ -11,11 +11,12 @@ const defaultState = {
 
 let globalState = { ...defaultState };
 let currentExerciseCode = null;
+let globalTimelineData = null;
 
 const listeners = new Set();
 
 const notifyListeners = () => {
-  listeners.forEach((listener) => listener(globalState));
+  listeners.forEach((listener) => listener({ state: globalState, timelineData: globalTimelineData }));
 };
 
 export const updateState = async (newState) => {
@@ -25,8 +26,9 @@ export const updateState = async (newState) => {
   if (currentExerciseCode) {
     try {
       await supabase
-        .from('exercises')
-        .upsert({ id: currentExerciseCode, state: globalState });
+        .from('exercise_sessions')
+        .update({ state: globalState })
+        .eq('code', currentExerciseCode);
     } catch (err) {
       console.error("Failed to sync state to Supabase", err);
     }
@@ -40,8 +42,9 @@ export const resetExercise = async () => {
   if (currentExerciseCode) {
     try {
       await supabase
-        .from('exercises')
-        .upsert({ id: currentExerciseCode, state: globalState });
+        .from('exercise_sessions')
+        .update({ state: globalState })
+        .eq('code', currentExerciseCode);
     } catch (err) {
       console.error("Failed to reset state in Supabase", err);
     }
@@ -49,42 +52,50 @@ export const resetExercise = async () => {
 };
 
 export const useStore = (exerciseCode) => {
-  const [state, setState] = useState(globalState);
+  const [data, setData] = useState({ state: globalState, timelineData: globalTimelineData, isLoading: true, error: null });
 
   useEffect(() => {
     if (!exerciseCode) return;
     
     currentExerciseCode = exerciseCode;
     
-    // Add component listener
-    const handleStateChange = (newState) => setState(newState);
+    const handleStateChange = (newData) => setData(prev => ({ ...prev, ...newData, isLoading: false }));
     listeners.add(handleStateChange);
 
     let channel;
 
     const setupSupabase = async () => {
-      // 1. Fetch initial state
-      const { data, error } = await supabase
-        .from('exercises')
-        .select('state')
-        .eq('id', exerciseCode)
+      // 1. Fetch session and its joined template
+      const { data: sessionData, error } = await supabase
+        .from('exercise_sessions')
+        .select(`
+          state,
+          template_id,
+          exercise_templates (
+            timeline_data
+          )
+        `)
+        .eq('code', exerciseCode)
         .single();
         
-      if (data && data.state) {
-        globalState = data.state;
-        notifyListeners();
-      } else if (error && error.code === 'PGRST116') {
-        // Create initial row if it doesn't exist
-        await supabase
-          .from('exercises')
-          .insert({ id: exerciseCode, state: defaultState });
+      if (error || !sessionData) {
+        console.error("Error fetching session:", error);
+        // Expose the actual error message or default to session not found
+        const errorMsg = error?.message ? `Database Error: ${error.message}` : 'Session not found. Please launch from dashboard.';
+        setData({ state: globalState, timelineData: null, isLoading: false, error: errorMsg });
+        return;
       }
 
+      globalState = sessionData.state || defaultState;
+      // Handle the joined relation (Supabase returns object or array depending on relation, here it's an object)
+      globalTimelineData = sessionData.exercise_templates?.timeline_data || [];
+      notifyListeners();
+
       // 2. Subscribe to realtime changes
-      channel = supabase.channel(`public:exercises:id=eq.${exerciseCode}`)
+      channel = supabase.channel(`public:exercise_sessions:code=eq.${exerciseCode}`)
         .on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'exercises', filter: `id=eq.${exerciseCode}` },
+          { event: '*', schema: 'public', table: 'exercise_sessions', filter: `code=eq.${exerciseCode}` },
           (payload) => {
             if (payload.new && payload.new.state) {
               globalState = payload.new.state;
@@ -105,5 +116,5 @@ export const useStore = (exerciseCode) => {
     };
   }, [exerciseCode]);
 
-  return state;
+  return data;
 };
