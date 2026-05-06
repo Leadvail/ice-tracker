@@ -33,7 +33,25 @@ export default function AssessorView({ session, timelineData, onBack }) {
   }, [timelineData]);
 
   const handleScoreChange = (item, score) => {
-    setScores(prev => ({ ...prev, [item]: score }));
+    setScores(prev => {
+      // If clearing score
+      if (score === null) {
+        const newScores = { ...prev };
+        delete newScores[item];
+        return newScores;
+      }
+      return { 
+        ...prev, 
+        [item]: { ...(prev[item] || {}), score } 
+      };
+    });
+  };
+
+  const handleCommentChange = (item, comment) => {
+    setScores(prev => ({ 
+      ...prev, 
+      [item]: { ...(prev[item] || {}), comment } 
+    }));
   };
 
   const handleSave = async () => {
@@ -58,12 +76,12 @@ export default function AssessorView({ session, timelineData, onBack }) {
 
   // Calculate live tally
   const { totalGraded, totalPossible, percentage } = useMemo(() => {
-    const gradedItems = Object.values(scores);
+    const gradedItems = Object.values(scores).filter(s => s && s.score);
     const totalGraded = gradedItems.length;
     // Score values are 1-4. Max points per item is 4.
-    const totalPoints = gradedItems.reduce((acc, val) => acc + val, 0);
+    const totalPoints = gradedItems.reduce((acc, val) => acc + val.score, 0);
     const totalPossible = totalGraded * 4;
-    // Formula: sum / max * 100. (Since 4 is max, 4/4 = 100%, 1/4 = 25%)
+    // Formula: sum / max * 100
     const percentage = totalGraded === 0 ? 0 : Math.round((totalPoints / totalPossible) * 100);
     return { totalGraded, totalPossible: 26, percentage };
   }, [scores]);
@@ -98,7 +116,10 @@ export default function AssessorView({ session, timelineData, onBack }) {
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1.5rem' }}>
                 {catData.items.map(item => {
-                  const currentScore = scores[item];
+                  const currentScoreObj = scores[item] || {};
+                  const currentScore = currentScoreObj.score;
+                  const currentComment = currentScoreObj.comment || '';
+                  
                   return (
                     <div key={item} style={{ paddingBottom: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -177,6 +198,28 @@ export default function AssessorView({ session, timelineData, onBack }) {
                           );
                         })}
                       </div>
+
+                      {currentScore && (
+                        <div style={{ marginTop: '1rem' }}>
+                          <textarea
+                            placeholder="Add your comments or evidence justification here..."
+                            value={currentComment}
+                            onChange={(e) => handleCommentChange(item, e.target.value)}
+                            style={{
+                              width: '100%',
+                              minHeight: '80px',
+                              padding: '0.75rem',
+                              background: 'rgba(0,0,0,0.2)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '6px',
+                              color: 'var(--text-main)',
+                              fontSize: '0.9rem',
+                              resize: 'vertical',
+                              fontFamily: 'inherit'
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
