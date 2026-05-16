@@ -50,6 +50,7 @@ function TimelineNode({ node, isFacilitator, state, exerciseTimeSecs }) {
       <div className="node-box">
         <div className="node-title">{node.title}</div>
         {node.time && <div className="node-time">{node.time}</div>}
+        {node.length > 0 && <div className="node-length" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Length: {node.length} min</div>}
       </div>
       {node.rolePlayers && node.rolePlayers.length > 0 && (
         <div className="node-role-badge">
@@ -181,6 +182,7 @@ function SnippetView({ activeNode, visibleNodes, isFacilitator, state, exerciseT
         ) : (
           <>
             <h2 className="snippet-title">{activeNode.title} {activeNode.time ? `(${activeNode.time})` : ''}</h2>
+            {activeNode.length > 0 && <div style={{ marginBottom: '1rem', color: 'var(--color-blue)', fontWeight: 'bold' }}>Inject Length: {activeNode.length} minutes</div>}
             <div className="snippet-content">
               <ul>
                 {activeNode.detail.map((line, idx) => (
@@ -362,22 +364,38 @@ export default function App() {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Calculate Role Players
-  const rolePlayerMap = {};
-  (timelineData || []).forEach(item => {
-    const processNode = (n) => {
-      if (n.rolePlayers) {
-        n.rolePlayers.forEach(rp => {
-          if (!rolePlayerMap[rp]) rolePlayerMap[rp] = [];
-          rolePlayerMap[rp].push(n.title);
-        });
-      }
-    };
-    if (item.type === 'node') processNode(item);
-    if (item.options) {
-      Object.values(item.options).forEach(processNode);
+  const getNodeSecs = (timeStr) => {
+    if (!timeStr) return 0;
+    const parts = timeStr.split(':');
+    if (parts.length === 2) {
+      return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60;
     }
-  });
+    return 0;
+  };
+
+  const getUpcomingRolePlayers = () => {
+    const upcoming = [];
+    for (const node of (timelineData || [])) {
+      if (node.type === 'node' && node.rolePlayers && node.rolePlayers.length > 0 && node.time) {
+        if (!state.completedNodes.includes(node.id)) {
+          const nodeSecs = getNodeSecs(node.time);
+          upcoming.push({ node, secondsUntil: nodeSecs - exerciseTimeSecs });
+        }
+      }
+    }
+    return upcoming.sort((a, b) => a.secondsUntil - b.secondsUntil);
+  };
+  const upcomingRPs = getUpcomingRolePlayers();
+
+  const formatCountdown = (secs) => {
+    const isNegative = secs < 0;
+    const absSecs = Math.abs(secs);
+    const h = Math.floor(absSecs / 3600);
+    const m = Math.floor((absSecs % 3600) / 60);
+    const s = absSecs % 60;
+    const timeStr = `${h > 0 ? h.toString().padStart(2, '0') + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return isNegative ? `+${timeStr} (Overdue)` : timeStr;
+  };
 
   return (
     <div className="flex-col" style={{ minHeight: '100vh', display: 'flex' }}>
@@ -427,15 +445,57 @@ export default function App() {
 
           {/* Right Panel: Role Players */}
           <div className="panel-roles">
-            <div className="role-panel">
-              <h3>Role Players</h3>
-              <div className="role-list">
-                {Object.entries(rolePlayerMap).map(([rp, injects]) => (
-                  <div key={rp} className="role-item">
-                    <span className="role-name">{rp}</span>
-                    <span className="role-injects">{Array.from(new Set(injects)).join(', ')}</span>
+            <div className="role-panel" style={{ padding: 0, backgroundColor: 'transparent', boxShadow: 'none' }}>
+              <h3 style={{ marginBottom: '1rem', color: 'var(--text-main)', fontSize: '1.2rem', textAlign: 'center' }}>Upcoming Role Players</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {upcomingRPs.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem', backgroundColor: 'var(--bg-panel)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    No upcoming role players.
                   </div>
-                ))}
+                ) : (
+                  upcomingRPs.map((rp, index) => {
+                    const isNext = index === 0;
+                    const isOverdue = rp.secondsUntil < 0;
+                    return (
+                      <div key={rp.node.id} style={{
+                        padding: isNext ? '1.5rem' : '1rem',
+                        backgroundColor: 'var(--bg-panel)',
+                        borderRadius: '8px',
+                        border: isNext ? (isOverdue ? '2px solid var(--color-red)' : '2px solid var(--color-blue)') : '1px solid var(--border-color)',
+                        boxShadow: isNext ? '0 4px 12px rgba(0,0,0,0.15)' : 'none',
+                        transition: 'all 0.3s ease'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                          <h4 style={{ margin: 0, color: 'var(--text-muted)', fontSize: isNext ? '0.9rem' : '0.8rem', textTransform: 'uppercase' }}>
+                            {rp.node.title} {rp.node.time ? `(${rp.node.time})` : ''}
+                          </h4>
+                          <div style={{
+                            fontSize: isNext ? '1.5rem' : '1.1rem',
+                            fontWeight: 'bold',
+                            color: isOverdue ? 'var(--color-red)' : (isNext ? 'var(--color-blue)' : 'var(--text-main)')
+                          }}>
+                            {formatCountdown(rp.secondsUntil)}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          {rp.node.rolePlayers.map(name => (
+                            <div key={name} style={{
+                              backgroundColor: isNext ? 'rgba(59, 130, 246, 0.1)' : 'var(--bg-page)',
+                              border: isNext ? '1px solid rgba(59, 130, 246, 0.2)' : '1px solid var(--border-color)',
+                              padding: isNext ? '0.5rem 0.75rem' : '0.25rem 0.5rem',
+                              borderRadius: '4px',
+                              fontSize: isNext ? '0.95rem' : '0.85rem',
+                              fontWeight: isNext ? 600 : 500,
+                              color: isNext ? 'var(--color-blue)' : 'var(--text-main)'
+                            }}>
+                              {name}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
