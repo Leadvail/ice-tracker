@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { supabase } from './supabase';
 import { categoryMap, scoreDescriptions } from './criteriaMap';
+import Receiver from './Receiver';
 
 export default function AssessorView({ session, timelineData, onBack }) {
   const initialScores = session?.scores || {};
@@ -285,7 +286,7 @@ export default function AssessorView({ session, timelineData, onBack }) {
           </div>
         )}
       </div>
-
+      <Receiver exerciseCode={session?.code} />
     </div>
   );
 }

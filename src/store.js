@@ -72,9 +72,7 @@ export const useStore = (exerciseCode) => {
         .select(`
           state, candidate_name, assessor_1_name, assessor_2_name, scores,
           template_id,
-          exercise_templates (
-            timeline_data
-          )
+          exercise_templates ( start_clock_node_id, start_clock_time )
         `)
         .eq('code', exerciseCode)
         .single();
@@ -83,14 +81,51 @@ export const useStore = (exerciseCode) => {
         console.error("Error fetching session:", error);
         // Expose the actual error message or default to session not found
         const errorMsg = error?.message ? `Database Error: ${error.message}` : 'Session not found. Please launch from dashboard.';
-        setData({ state: globalState, timelineData: null, isLoading: false, error: errorMsg });
+        setData({ state: globalState, timelineData: null, session: null, isLoading: false, error: errorMsg });
         return;
       }
 
       globalState = sessionData.state || defaultState;
-      globalSessionData = sessionData;
-      // Handle the joined relation (Supabase returns object or array depending on relation, here it's an object)
-      globalTimelineData = sessionData.exercise_templates?.timeline_data || [];
+      // Expose template info at the root of session data for ease of access
+      globalSessionData = { 
+        ...sessionData, 
+        template: sessionData.exercise_templates 
+      };
+
+      // Fetch relational timeline nodes
+      const { data: nodesData, error: nodesError } = await supabase
+        .from('timeline_nodes')
+        .select('*')
+        .eq('template_id', sessionData.template_id)
+        .order('order_index', { ascending: true });
+
+      if (nodesError) {
+        console.error("Error fetching timeline nodes:", nodesError);
+        globalTimelineData = [];
+      } else {
+        globalTimelineData = (nodesData || []).map(n => {
+          const mapped = {
+            id: n.node_id,
+            title: n.title,
+            time: n.time,
+            length: n.length_mins,
+            type: n.node_type,
+            detail: n.detail,
+            criteria: n.criteria,
+            rolePlayers: n.role_players,
+            options: n.branch_options,
+            dependsOn: n.depends_on,
+            linkedId: n.linked_id,
+            branchLabel: n.branch_label
+          };
+          // Clean up nulls
+          Object.keys(mapped).forEach(key => {
+            if (mapped[key] === null || mapped[key] === undefined) delete mapped[key];
+          });
+          return mapped;
+        });
+      }
+      
       notifyListeners();
 
       // 2. Subscribe to realtime changes

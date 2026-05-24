@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { updateState, resetExercise, useStore } from './store';
+import TimelineBuilder from './TimelineBuilder';
 import Dashboard from './Dashboard';
 import AssessorView from './AssessorView';
+import UnifiedStreamer from './UnifiedStreamer';
+import AssessorModeOverlay from './AssessorModeOverlay';
+import { useWebRTCPresence } from './useWebRTCPresence';
 import { categoryMap } from './criteriaMap';
 
 function TimelineNode({ node, isFacilitator, state, exerciseTimeSecs }) {
@@ -287,22 +291,38 @@ export default function App() {
   const [auth, setAuth] = useState(null);
   const { state, timelineData, session, isLoading, error } = useStore(auth?.code);
   const [exerciseTimeSecs, setExerciseTimeSecs] = useState(15 * 3600 + 22 * 60); // 15:22:00
+  const [isAssessorMode, setIsAssessorMode] = useState(false);
+  const isBroadcasterOnline = useWebRTCPresence(auth?.code);
+
+  const getBaseTimeSecs = () => {
+    if (session?.template?.start_clock_time) {
+      const parts = session.template.start_clock_time.split(':');
+      if (parts.length === 2) {
+        return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60;
+      }
+    }
+    return 15 * 3600 + 22 * 60; // fallback to 15:22:00
+  };
 
   useEffect(() => {
     let interval;
     if (state && state.isClockRunning && state.clockStartTime) {
       interval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - state.clockStartTime) / 1000);
-        setExerciseTimeSecs((15 * 3600 + 22 * 60) + elapsed);
+        setExerciseTimeSecs(getBaseTimeSecs() + elapsed);
       }, 1000);
     } else {
-      setExerciseTimeSecs(15 * 3600 + 22 * 60);
+      setExerciseTimeSecs(getBaseTimeSecs());
     }
     return () => clearInterval(interval);
-  }, [state?.isClockRunning, state?.clockStartTime]);
+  }, [state?.isClockRunning, state?.clockStartTime, session?.template?.start_clock_time]);
 
   if (!auth) {
     return <Dashboard onLogin={setAuth} />;
+  }
+
+  if (auth.role === 'admin') {
+    return <TimelineBuilder user={auth.user} onLogout={() => setAuth(null)} />;
   }
 
   if (isLoading) {
@@ -406,15 +426,41 @@ export default function App() {
           </div>
           <span className="code-text" style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Code: {auth.code}</span>
         </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '1.5rem', opacity: isBroadcasterOnline ? 1 : 0.3, transition: 'opacity 0.3s' }}>
+              {isBroadcasterOnline ? '🔴' : '⚪'}
+            </span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 'bold' }}>
+              {isBroadcasterOnline ? 'Broadcast Live' : 'No Broadcast'}
+            </span>
+          </div>
+
+          <button 
+            className={`btn ${isAssessorMode ? 'btn-primary' : ''}`} 
+            onClick={() => setIsAssessorMode(true)}
+            style={{ margin: 0, border: '1px solid var(--color-blue)', backgroundColor: isAssessorMode ? 'var(--color-blue)' : 'transparent' }}
+          >
+            🎬 Cinematic Mode
+          </button>
+
           {isFacilitator && (
-            <button className="btn btn-danger" onClick={resetExercise}>
+            <button className="btn btn-danger" onClick={resetExercise} style={{ margin: 0 }}>
               Reset Exercise
             </button>
           )}
         </div>
       </header>
+
+      {isAssessorMode && (
+        <AssessorModeOverlay 
+          exerciseCode={auth.code} 
+          timelineData={timelineData} 
+          isBroadcasterOnline={isBroadcasterOnline}
+          onClose={() => setIsAssessorMode(false)}
+        />
+      )}
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Timeline isFacilitator={isFacilitator} state={state} visibleNodes={visibleNodes} exerciseTimeSecs={exerciseTimeSecs} />
@@ -425,7 +471,7 @@ export default function App() {
             <div className="clock-display">
               {formatTime(exerciseTimeSecs)}
             </div>
-            {activeNodeData?.id === 'handover' && isFacilitator && !state.isClockRunning && (
+            {session?.template?.start_clock_node_id && activeNodeData?.id === session.template.start_clock_node_id && isFacilitator && !state.isClockRunning && (
               <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
                 <button 
                   className="btn-start-clock" 
@@ -436,6 +482,8 @@ export default function App() {
                 </button>
               </div>
             )}
+            
+            <UnifiedStreamer exerciseCode={auth.code} isBroadcasterOnline={isBroadcasterOnline} />
           </div>
 
           {/* Middle Panel: Snippet View */}
