@@ -13,6 +13,7 @@ export class Broadcaster {
     this.localStream = localStream;
     this.peers = {}; // Map of receiverId -> RTCPeerConnection
     this.channel = null;
+    this.broadcasterId = 'broadcaster-' + Math.random().toString(36).substr(2, 9);
   }
 
   async start() {
@@ -28,9 +29,9 @@ export class Broadcaster {
       const msg = payload.payload;
       if (msg.type === 'join') {
         await this.handleJoin(msg.sender);
-      } else if (msg.type === 'answer' && msg.target === 'broadcaster') {
+      } else if (msg.type === 'answer' && msg.target === this.broadcasterId) {
         await this.handleAnswer(msg.sender, msg.answer);
-      } else if (msg.type === 'candidate' && msg.target === 'broadcaster') {
+      } else if (msg.type === 'candidate' && msg.target === this.broadcasterId) {
         await this.handleCandidate(msg.sender, msg.candidate);
       }
     });
@@ -46,7 +47,7 @@ export class Broadcaster {
     this.channel.send({
       type: 'broadcast',
       event: 'webrtc',
-      payload: { type: 'broadcaster_live', sender: 'broadcaster' }
+      payload: { type: 'broadcaster_live', sender: this.broadcasterId }
     });
   }
 
@@ -68,7 +69,7 @@ export class Broadcaster {
         this.channel.send({
           type: 'broadcast',
           event: 'webrtc',
-          payload: { type: 'candidate', target: receiverId, sender: 'broadcaster', candidate: event.candidate }
+          payload: { type: 'candidate', target: receiverId, sender: this.broadcasterId, candidate: event.candidate }
         });
       }
     };
@@ -79,7 +80,7 @@ export class Broadcaster {
     this.channel.send({
       type: 'broadcast',
       event: 'webrtc',
-      payload: { type: 'offer', target: receiverId, sender: 'broadcaster', offer }
+      payload: { type: 'offer', target: receiverId, sender: this.broadcasterId, offer }
     });
   }
 
@@ -150,6 +151,7 @@ export class ReceiverManager {
     this.onTrack = onTrack;
     this.peer = null;
     this.channel = null;
+    this.broadcasterId = null;
   }
 
   async start() {
@@ -164,6 +166,7 @@ export class ReceiverManager {
       if (msg.type === 'broadcaster_live') {
         this.join();
       } else if (msg.type === 'offer' && msg.target === this.receiverId) {
+        this.broadcasterId = msg.sender;
         await this.handleOffer(msg.offer);
       } else if (msg.type === 'candidate' && msg.target === this.receiverId) {
         await this.handleCandidate(msg.candidate);
@@ -204,7 +207,7 @@ export class ReceiverManager {
         this.channel.send({
           type: 'broadcast',
           event: 'webrtc',
-          payload: { type: 'candidate', target: 'broadcaster', sender: this.receiverId, candidate: event.candidate }
+          payload: { type: 'candidate', target: this.broadcasterId, sender: this.receiverId, candidate: event.candidate }
         });
       }
     };
@@ -216,7 +219,7 @@ export class ReceiverManager {
     this.channel.send({
       type: 'broadcast',
       event: 'webrtc',
-      payload: { type: 'answer', target: 'broadcaster', sender: this.receiverId, answer }
+      payload: { type: 'answer', target: this.broadcasterId, sender: this.receiverId, answer }
     });
   }
 
