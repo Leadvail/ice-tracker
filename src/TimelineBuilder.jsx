@@ -181,7 +181,9 @@ export default function TimelineBuilder({ user, onLogout }) {
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2>Timeline Builder</h2>
-        <button onClick={onLogout} className="btn btn-danger">Logout</button>
+        {selectedTemplate && (
+          <button onClick={() => setSelectedTemplate(null)} className="btn btn-primary">Back</button>
+        )}
       </header>
 
       <div style={{ display: 'flex', gap: '2rem' }}>
@@ -223,7 +225,7 @@ export default function TimelineBuilder({ user, onLogout }) {
                   <label>Start Clocks Inject</label>
                   <select className="input" value={clockSettings.start_clock_node_id} onChange={e => setClockSettings({...clockSettings, start_clock_node_id: e.target.value})}>
                     <option value="">-- None --</option>
-                    {nodes.map(n => <option key={n.id} value={n.id}>{n.title || n.node_id}</option>)}
+                    {nodes.map(n => <option key={n.id} value={n.node_id}>{n.title || n.node_id}</option>)}
                   </select>
                 </div>
                 <div style={{ flex: 1 }}>

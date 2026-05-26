@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { supabase } from './supabase';
 import { updateState, resetExercise, useStore } from './store';
 import TimelineBuilder from './TimelineBuilder';
 import Dashboard from './Dashboard';
@@ -7,6 +9,8 @@ import UnifiedStreamer from './UnifiedStreamer';
 import AssessorModeOverlay from './AssessorModeOverlay';
 import { useWebRTCPresence } from './useWebRTCPresence';
 import { categoryMap } from './criteriaMap';
+import Login from './Login';
+import Layout from './Layout';
 
 function TimelineNode({ node, isFacilitator, state, exerciseTimeSecs }) {
   // Determine status
@@ -287,12 +291,16 @@ function SnippetView({ activeNode, visibleNodes, isFacilitator, state, exerciseT
   );
 }
 
-export default function App() {
-  const [auth, setAuth] = useState(null);
+export function LiveSession() {
+  const { code, role } = useParams();
+  const navigate = useNavigate();
+  const auth = { code, role };
   const { state, timelineData, session, isLoading, error } = useStore(auth?.code);
   const [exerciseTimeSecs, setExerciseTimeSecs] = useState(15 * 3600 + 22 * 60); // 15:22:00
   const [isAssessorMode, setIsAssessorMode] = useState(false);
-  const isBroadcasterOnline = useWebRTCPresence(auth?.code);
+  const [isLocalBroadcasting, setIsLocalBroadcasting] = useState(false);
+  const isRemoteBroadcasterOnline = useWebRTCPresence(auth?.code);
+  const isBroadcasterOnline = isRemoteBroadcasterOnline || isLocalBroadcasting;
 
   const getBaseTimeSecs = () => {
     if (session?.template?.start_clock_time) {
@@ -317,12 +325,8 @@ export default function App() {
     return () => clearInterval(interval);
   }, [state?.isClockRunning, state?.clockStartTime, session?.template?.start_clock_time]);
 
-  if (!auth) {
-    return <Dashboard onLogin={setAuth} />;
-  }
-
-  if (auth.role === 'admin') {
-    return <TimelineBuilder user={auth.user} onLogout={() => setAuth(null)} />;
+  if (!auth.code || !auth.role) {
+    return <Navigate to="/join" />;
   }
 
   if (isLoading) {
@@ -338,13 +342,13 @@ export default function App() {
       <div className="flex-col" style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
         <h2 style={{ color: 'var(--color-red)' }}>Error</h2>
         <p>{error}</p>
-        <button className="btn btn-primary" onClick={() => setAuth(null)}>Back to Dashboard</button>
+        <button className="btn btn-primary" onClick={() => navigate('/join')}>Back to Dashboard</button>
       </div>
     );
   }
 
   if (auth.role === 'assessor') {
-    return <AssessorView session={{ ...session, code: auth.code }} timelineData={timelineData} onBack={() => setAuth(null)} />;
+    return <AssessorView session={{ ...session, code: auth.code }} timelineData={timelineData} onBack={() => navigate('/join')} />;
   }
 
   const isFacilitator = auth.role === 'facilitator';
@@ -437,13 +441,15 @@ export default function App() {
             </span>
           </div>
 
-          <button 
-            className={`btn ${isAssessorMode ? 'btn-primary' : ''}`} 
-            onClick={() => setIsAssessorMode(true)}
-            style={{ margin: 0, border: '1px solid var(--color-blue)', backgroundColor: isAssessorMode ? 'var(--color-blue)' : 'transparent' }}
-          >
-            🎬 Cinematic Mode
-          </button>
+          {isBroadcasterOnline && (
+            <button 
+              className={`btn ${isAssessorMode ? 'btn-primary' : ''}`} 
+              onClick={() => setIsAssessorMode(true)}
+              style={{ margin: 0, border: '1px solid var(--color-blue)', backgroundColor: isAssessorMode ? 'var(--color-blue)' : 'transparent', color: '#FFFFFF' }}
+            >
+              🎬 Cinematic Mode
+            </button>
+          )}
 
           {isFacilitator && (
             <button className="btn btn-danger" onClick={resetExercise} style={{ margin: 0 }}>
@@ -482,8 +488,11 @@ export default function App() {
                 </button>
               </div>
             )}
-            
-            <UnifiedStreamer exerciseCode={auth.code} isBroadcasterOnline={isBroadcasterOnline} />
+            <UnifiedStreamer 
+              exerciseCode={auth.code} 
+              isBroadcasterOnline={isBroadcasterOnline}
+              onBroadcastStateChange={setIsLocalBroadcasting} 
+            />
           </div>
 
           {/* Middle Panel: Snippet View */}
@@ -550,5 +559,52 @@ export default function App() {
         </div>
       </main>
     </div>
+  );
+}
+
+function DashboardWrapper({ initialTab }) {
+  const navigate = useNavigate();
+  return <Dashboard initialTab={initialTab} onLogin={(data) => navigate(`/session/${data.code}/${data.role}`)} />;
+}
+
+export default function App() {
+  const [session, setSession] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (isLoading) return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>;
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Unauthenticated Routes */}
+        {!session ? (
+          <Route path="*" element={<Login />} />
+        ) : (
+          /* Authenticated Routes */
+          <Route element={<Layout />}>
+            <Route path="/" element={<Navigate to="/join" replace />} />
+            <Route path="/login" element={<Navigate to="/join" replace />} />
+            <Route path="/join" element={<DashboardWrapper initialTab="join" />} />
+            <Route path="/library" element={<DashboardWrapper initialTab="library" />} />
+            <Route path="/admin" element={<TimelineBuilder />} />
+            <Route path="/session/:code/:role" element={<LiveSession />} />
+            <Route path="*" element={<Navigate to="/join" replace />} />
+          </Route>
+        )}
+      </Routes>
+    </BrowserRouter>
   );
 }

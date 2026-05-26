@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 
-export default function Dashboard({ onLogin }) {
-  const [tab, setTab] = useState('join'); // 'join', 'library', 'admin'
+export default function Dashboard({ onLogin, initialTab = 'join' }) {
+  const [tab, setTab] = useState(initialTab);
   
   // Join State
   const [code, setCode] = useState('');
@@ -13,9 +13,6 @@ export default function Dashboard({ onLogin }) {
   const [launchTemplate, setLaunchTemplate] = useState(null);
   const [launchForm, setLaunchForm] = useState({ code: '', candidate: '', assessor1: '', assessor2: '' });
 
-  // Admin Login State
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
   useEffect(() => {
     if (tab === 'library') {
       supabase.from('exercise_templates').select('id, name, officer_rank, created_at').order('created_at', { ascending: false })
@@ -60,31 +57,6 @@ export default function Dashboard({ onLogin }) {
     onLogin({ code: newCode, role: 'facilitator' });
   };
 
-  const handleAdminLogin = async (e) => {
-    e.preventDefault();
-    if (!adminEmail || !adminPassword) return;
-
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: adminEmail,
-      password: adminPassword,
-    });
-
-    if (authError || !authData.user) {
-      alert("Login failed: " + (authError?.message || "Invalid credentials"));
-      return;
-    }
-
-    // Verify role in user_roles
-    const { data: roleData, error: roleError } = await supabase.from('user_roles').select('role').eq('user_id', authData.user.id).single();
-    if (roleError || !roleData || roleData.role !== 'admin') {
-      alert("Access Denied: You do not have administrator privileges.");
-      await supabase.auth.signOut();
-      return;
-    }
-
-    onLogin({ role: 'admin', user: authData.user });
-  };
-
   return (
     <div className="login-container">
       <div className="card login-form" style={{ maxWidth: '600px', width: '100%' }}>
@@ -105,11 +77,11 @@ export default function Dashboard({ onLogin }) {
             Master Library
           </button>
           <button 
-            className={`tab-btn ${tab === 'admin' ? 'active' : ''}`} 
-            onClick={() => setTab('admin')}
-            style={{ flex: 1, padding: '1rem', background: 'none', border: 'none', color: tab === 'admin' ? 'white' : 'var(--text-muted)', borderBottom: tab === 'admin' ? '2px solid var(--color-blue)' : 'none', cursor: 'pointer', fontWeight: 'bold' }}
+            className="tab-btn" 
+            onClick={() => window.location.href = '/admin'}
+            style={{ flex: 1, padding: '1rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: 'bold' }}
           >
-            Admin
+            Timeline Builder
           </button>
         </div>
 
@@ -187,24 +159,6 @@ export default function Dashboard({ onLogin }) {
               </div>
             </div>
             <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem' }}>Launch Exercise</button>
-          </form>
-        )}
-
-        {tab === 'admin' && (
-          <form onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-              <h2>Timeline Builder Login</h2>
-              <p style={{ color: 'var(--text-muted)' }}>Secure access for platform administrators.</p>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Email Address</label>
-              <input type="email" className="input" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} required />
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Password</label>
-              <input type="password" className="input" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} required />
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem' }}>Login to Builder</button>
           </form>
         )}
 

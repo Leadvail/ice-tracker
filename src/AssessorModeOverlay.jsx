@@ -1,8 +1,26 @@
-import React, { useState } from 'react';
-import UnifiedStreamer from './UnifiedStreamer';
+import React, { useState, useRef, useEffect } from 'react';
 
 export default function AssessorModeOverlay({ exerciseCode, timelineData, isBroadcasterOnline, onClose }) {
   const [expandedNodeId, setExpandedNodeId] = useState(null);
+  const cinematicVideoRef = useRef(null);
+
+  useEffect(() => {
+    // Find the existing active video element on the page (from the UnifiedStreamer mounted in the main layout)
+    const existingVideos = document.querySelectorAll('video');
+    let activeStream = null;
+    
+    // Find the one that actually has a srcObject
+    for (let i = 0; i < existingVideos.length; i++) {
+      if (existingVideos[i].srcObject && existingVideos[i] !== cinematicVideoRef.current) {
+        activeStream = existingVideos[i].srcObject;
+        break;
+      }
+    }
+
+    if (activeStream && cinematicVideoRef.current) {
+      cinematicVideoRef.current.srcObject = activeStream;
+    }
+  }, []);
 
   return (
     <div style={{
@@ -46,9 +64,15 @@ export default function AssessorModeOverlay({ exerciseCode, timelineData, isBroa
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1
+        zIndex: 1,
+        backgroundColor: '#000'
       }}>
-        <UnifiedStreamer exerciseCode={exerciseCode} isBroadcasterOnline={isBroadcasterOnline} />
+        <video 
+          ref={cinematicVideoRef} 
+          autoPlay 
+          playsInline 
+          style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+        />
       </div>
 
       {/* Bottom Timeline Overlay */}

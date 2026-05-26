@@ -97,6 +97,34 @@ export class Broadcaster {
     }
   }
 
+  async replaceStream(newStream) {
+    this.localStream = newStream;
+    const newVideoTrack = newStream.getVideoTracks()[0];
+    const newAudioTrack = newStream.getAudioTracks()[0];
+
+    Object.values(this.peers).forEach(peer => {
+      const senders = peer.getSenders();
+      
+      if (newVideoTrack) {
+        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+        if (videoSender) {
+          videoSender.replaceTrack(newVideoTrack);
+        } else {
+          peer.addTrack(newVideoTrack, this.localStream);
+        }
+      }
+      
+      if (newAudioTrack) {
+        const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
+        if (audioSender) {
+          audioSender.replaceTrack(newAudioTrack);
+        } else {
+          peer.addTrack(newAudioTrack, this.localStream);
+        }
+      }
+    });
+  }
+
   stop() {
     Object.values(this.peers).forEach(peer => peer.close());
     this.peers = {};

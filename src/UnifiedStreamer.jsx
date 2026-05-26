@@ -1,13 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Broadcaster, ReceiverManager } from './WebRTCManager';
 
-export default function UnifiedStreamer({ exerciseCode, isBroadcasterOnline }) {
+export default function UnifiedStreamer({ exerciseCode, isBroadcasterOnline, onBroadcastStateChange }) {
   const [mode, setMode] = useState('idle'); // 'idle', 'broadcasting', 'receiving'
   const [scale, setScale] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [hasVideo, setHasVideo] = useState(true);
   const [hasAudio, setHasAudio] = useState(true);
+  const [remoteStream, setRemoteStream] = useState(null); // the video stream state
   
+  useEffect(() => {
+    if (onBroadcastStateChange) {
+      onBroadcastStateChange(mode === 'broadcasting');
+    }
+  }, [mode, onBroadcastStateChange]);
+  
+  // Device Selection State
+  const [videoDevices, setVideoDevices] = useState([]);
+  const [audioDevices, setAudioDevices] = useState([]);
+  const [selectedVideoId, setSelectedVideoId] = useState('');
+  const [selectedAudioId, setSelectedAudioId] = useState('');
+
   const [manager, setManager] = useState(null);
   const videoRef = useRef(null);
 
@@ -24,11 +37,12 @@ export default function UnifiedStreamer({ exerciseCode, isBroadcasterOnline }) {
       if (mode === 'broadcasting' && manager?.localStream) {
         videoRef.current.srcObject = manager.localStream;
         videoRef.current.volume = 0; // Don't hear ourselves
+      } else if (mode === 'receiving' && remoteStream) {
+        videoRef.current.srcObject = remoteStream;
       }
-      // Note: for receiving, ReceiverManager handles ontack and we pass a callback below
       videoRef.current.muted = isMuted;
     }
-  }, [mode, manager, isMuted]);
+  }, [mode, manager, isMuted, remoteStream]);
 
   // If the remote broadcaster stops, kick us out of 'receiving' mode
   useEffect(() => {
@@ -40,19 +54,63 @@ export default function UnifiedStreamer({ exerciseCode, isBroadcasterOnline }) {
     }
   }, [isBroadcasterOnline, mode, manager]);
 
+  const fetchDevices = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setVideoDevices(devices.filter(d => d.kind === 'videoinput'));
+      setAudioDevices(devices.filter(d => d.kind === 'audioinput'));
+    } catch (err) {
+      console.error("Failed to fetch devices", err);
+    }
+  };
+
   const startBroadcast = async () => {
     if (window.confirm("Are you sure you want to broadcast your camera and microphone to the entire exercise?")) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        
+        const currentVideo = stream.getVideoTracks()[0];
+        const currentAudio = stream.getAudioTracks()[0];
+        if (currentVideo) setSelectedVideoId(currentVideo.getSettings().deviceId);
+        if (currentAudio) setSelectedAudioId(currentAudio.getSettings().deviceId);
+
         const bc = new Broadcaster(exerciseCode, stream);
         await bc.start();
         setManager(bc);
         setMode('broadcasting');
         setHasVideo(true);
         setHasAudio(true);
+        fetchDevices();
       } catch (err) {
         alert("Failed to access camera/microphone: " + err.message);
       }
+    }
+  };
+
+  const handleDeviceChange = async (type, deviceId) => {
+    if (type === 'video') setSelectedVideoId(deviceId);
+    if (type === 'audio') setSelectedAudioId(deviceId);
+    
+    const vId = type === 'video' ? deviceId : selectedVideoId;
+    const aId = type === 'audio' ? deviceId : selectedAudioId;
+
+    try {
+      if (manager?.localStream) {
+        manager.localStream.getTracks().forEach(t => t.stop());
+      }
+      const constraints = {
+        video: vId ? { deviceId: { exact: vId } } : true,
+        audio: aId ? { deviceId: { exact: aId } } : true,
+      };
+      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (videoRef.current) {
+        videoRef.current.srcObject = newStream;
+      }
+      if (manager) {
+        manager.replaceStream(newStream);
+      }
+    } catch (err) {
+      console.error("Error switching device", err);
     }
   };
 
@@ -64,9 +122,7 @@ export default function UnifiedStreamer({ exerciseCode, isBroadcasterOnline }) {
 
   const watchStream = () => {
     const rc = new ReceiverManager(exerciseCode, (newStream) => {
-      if (videoRef.current) {
-        videoRef.current.srcObject = newStream;
-      }
+      setRemoteStream(newStream); // Assigning it to the video stream state
     });
     rc.start();
     setManager(rc);
@@ -145,6 +201,31 @@ export default function UnifiedStreamer({ exerciseCode, isBroadcasterOnline }) {
             }}
           />
           
+          {mode === 'broadcasting' && (
+            <div style={{ display: 'flex', gap: '0.5rem', width: '100%', fontSize: '0.8rem' }}>
+              <select 
+                className="input" 
+                style={{ flex: 1, padding: '0.25rem' }} 
+                value={selectedVideoId} 
+                onChange={(e) => handleDeviceChange('video', e.target.value)}
+              >
+                {videoDevices.map(d => (
+                  <option key={d.deviceId} value={d.deviceId}>{d.label || 'Camera'}</option>
+                ))}
+              </select>
+              <select 
+                className="input" 
+                style={{ flex: 1, padding: '0.25rem' }} 
+                value={selectedAudioId} 
+                onChange={(e) => handleDeviceChange('audio', e.target.value)}
+              >
+                {audioDevices.map(d => (
+                  <option key={d.deviceId} value={d.deviceId}>{d.label || 'Microphone'}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '0.5rem', width: '100%', justifyContent: 'center' }}>
             {mode === 'broadcasting' && (
               <>
