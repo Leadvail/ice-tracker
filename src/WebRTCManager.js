@@ -17,6 +17,15 @@ export class Broadcaster {
   }
 
   async start() {
+    try {
+      await supabase
+        .from('exercise_sessions')
+        .update({ active_broadcaster_id: this.broadcasterId })
+        .eq('code', this.exerciseCode);
+    } catch (err) {
+      console.error("Failed to update active broadcaster id", err);
+    }
+
     this.channel = supabase.channel(`webrtc-${this.exerciseCode}`, {
       config: { broadcast: { self: false } }
     });
@@ -152,9 +161,39 @@ export class ReceiverManager {
     this.peer = null;
     this.channel = null;
     this.broadcasterId = null;
+    this.sessionChannel = null;
   }
 
   async start() {
+    try {
+      const { data } = await supabase
+        .from('exercise_sessions')
+        .select('active_broadcaster_id')
+        .eq('code', this.exerciseCode)
+        .single();
+      
+      if (data && data.active_broadcaster_id) {
+        this.broadcasterId = data.active_broadcaster_id;
+      }
+    } catch (err) {
+      console.error("Failed to fetch initial active broadcaster", err);
+    }
+
+    this.sessionChannel = supabase.channel(`session-${this.exerciseCode}`)
+      .on('postgres', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'exercise_sessions',
+        filter: `code=eq.${this.exerciseCode}`
+      }, (payload) => {
+        const newId = payload.new.active_broadcaster_id;
+        if (newId && newId !== this.broadcasterId) {
+          this.broadcasterId = newId;
+          this.join();
+        }
+      })
+      .subscribe();
+
     this.channel = supabase.channel(`webrtc-${this.exerciseCode}`, {
       config: { broadcast: { self: false } }
     });
@@ -237,6 +276,10 @@ export class ReceiverManager {
     if (this.channel) {
       this.channel.unsubscribe();
       this.channel = null;
+    }
+    if (this.sessionChannel) {
+      this.sessionChannel.unsubscribe();
+      this.sessionChannel = null;
     }
   }
 }
