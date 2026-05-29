@@ -136,6 +136,8 @@ export class Broadcaster {
   }
 
   stop() {
+    supabase.from('exercise_sessions').update({ active_broadcaster_id: null }).eq('code', this.exerciseCode).then();
+    
     Object.values(this.peers).forEach(peer => peer.close());
     this.peers = {};
     if (this.channel) {

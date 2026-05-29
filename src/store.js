@@ -129,7 +129,8 @@ export const useStore = (exerciseCode) => {
       notifyListeners();
 
       // 2. Subscribe to realtime changes
-      channel = supabase.channel(`public:exercise_sessions:code=eq.${exerciseCode}`)
+      const uniqueSuffix = Math.random().toString(36).substr(2, 9);
+      channel = supabase.channel(`public:exercise_sessions:code=eq.${exerciseCode}-${uniqueSuffix}`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'exercise_sessions', filter: `code=eq.${exerciseCode}` },

@@ -7,7 +7,6 @@ import Dashboard from './Dashboard';
 import AssessorView from './AssessorView';
 import UnifiedStreamer from './UnifiedStreamer';
 import AssessorModeOverlay from './AssessorModeOverlay';
-import { useWebRTCPresence } from './useWebRTCPresence';
 import { categoryMap } from './criteriaMap';
 import Login from './Login';
 import Layout from './Layout';
@@ -299,7 +298,7 @@ export function LiveSession() {
   const [exerciseTimeSecs, setExerciseTimeSecs] = useState(15 * 3600 + 22 * 60); // 15:22:00
   const [isAssessorMode, setIsAssessorMode] = useState(false);
   const [isLocalBroadcasting, setIsLocalBroadcasting] = useState(false);
-  const isRemoteBroadcasterOnline = useWebRTCPresence(auth?.code);
+  const isRemoteBroadcasterOnline = !!session?.active_broadcaster_id;
   const isBroadcasterOnline = isRemoteBroadcasterOnline || isLocalBroadcasting;
 
   const getBaseTimeSecs = () => {

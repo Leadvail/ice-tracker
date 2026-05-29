@@ -131,17 +131,23 @@ export default function TimelineBuilder({ user, onLogout }) {
     };
 
     if (editingNode) {
-      await supabase.from('timeline_nodes').update(payload).eq('id', editingNode.id);
+      const { data, error } = await supabase.from('timeline_nodes').update(payload).eq('id', editingNode.id).select().single();
       await supabase.from('audit_logs').insert({ user_id: user.id, action: 'UPDATE_NODE', entity_type: 'timeline_nodes', entity_id: editingNode.id });
+      if (data) {
+        setNodes(prevNodes => prevNodes.map(n => n.id === editingNode.id ? data : n));
+      } else {
+        // Fallback to optimistic if select fails
+        setNodes(prevNodes => prevNodes.map(n => n.id === editingNode.id ? { ...n, ...payload } : n));
+      }
     } else {
       const { data } = await supabase.from('timeline_nodes').insert(payload).select().single();
       if (data) {
         await supabase.from('audit_logs').insert({ user_id: user.id, action: 'CREATE_NODE', entity_type: 'timeline_nodes', entity_id: data.id });
+        setNodes(prevNodes => [...prevNodes, data]);
       }
     }
 
     setEditingNode(null);
-    fetchNodes(selectedTemplate.id);
   };
 
   // When nodes update, and we are not editing, auto-fill the time
