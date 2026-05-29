@@ -298,8 +298,31 @@ export function LiveSession() {
   const [exerciseTimeSecs, setExerciseTimeSecs] = useState(15 * 3600 + 22 * 60); // 15:22:00
   const [isAssessorMode, setIsAssessorMode] = useState(false);
   const [isLocalBroadcasting, setIsLocalBroadcasting] = useState(false);
-  const isRemoteBroadcasterOnline = !!session?.active_broadcaster_id;
-  const isBroadcasterOnline = isRemoteBroadcasterOnline || isLocalBroadcasting;
+  const [globalBroadcastState, setGlobalBroadcastState] = useState(false);
+
+  useEffect(() => {
+    if (!auth?.code) return;
+    
+    // Set initial state from session
+    if (session) {
+      setGlobalBroadcastState(!!session.active_broadcaster_id);
+    }
+
+    const channel = supabase
+      .channel('schema-db-changes-header')
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'exercise_sessions', filter: `code=eq.${auth.code}` }, 
+        (payload) => {
+          // Immediately update the UI text and flip 'No Broadcast' to 'Live (Broadcasting)'
+          setGlobalBroadcastState(!!payload.new.active_broadcaster_id);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [auth?.code, session]);
+
+  const isBroadcasterOnline = globalBroadcastState || isLocalBroadcasting;
 
   const getBaseTimeSecs = () => {
     if (session?.template?.start_clock_time) {
@@ -436,7 +459,7 @@ export function LiveSession() {
               {isBroadcasterOnline ? '🔴' : '⚪'}
             </span>
             <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 'bold' }}>
-              {isBroadcasterOnline ? 'Broadcast Live' : 'No Broadcast'}
+              {isBroadcasterOnline ? 'Live' : 'No Broadcast'}
             </span>
           </div>
 
