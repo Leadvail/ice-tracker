@@ -300,27 +300,30 @@ export function LiveSession() {
   const [isLocalBroadcasting, setIsLocalBroadcasting] = useState(false);
   const [globalBroadcastState, setGlobalBroadcastState] = useState(false);
 
+  // Initialize state once session loads
   useEffect(() => {
-    if (!auth?.code) return;
-    
-    // Set initial state from session
     if (session) {
       setGlobalBroadcastState(!!session.active_broadcaster_id);
     }
+  }, [session?.active_broadcaster_id]);
+
+  // Strict database listener that NEVER drops when session updates
+  useEffect(() => {
+    if (!auth?.code) return;
 
     const channel = supabase
-      .channel('schema-db-changes-header')
+      .channel('schema-db-changes-header-' + Math.random().toString(36).substr(2, 9))
       .on('postgres_changes', 
         { event: 'UPDATE', schema: 'public', table: 'exercise_sessions', filter: `code=eq.${auth.code}` }, 
         (payload) => {
-          // Immediately update the UI text and flip 'No Broadcast' to 'Live (Broadcasting)'
+          // Immediately update the UI text and flip 'No Broadcast' to 'Live'
           setGlobalBroadcastState(!!payload.new.active_broadcaster_id);
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [auth?.code, session]);
+  }, [auth?.code]);
 
   const isBroadcasterOnline = globalBroadcastState || isLocalBroadcasting;
 
