@@ -7,6 +7,8 @@ const ICE_SERVERS = {
   ]
 };
 
+
+
 export class Broadcaster {
   constructor(exerciseCode, localStream) {
     this.exerciseCode = exerciseCode;
@@ -45,8 +47,11 @@ export class Broadcaster {
       }
     });
 
-    await this.channel.subscribe();
-    await this.presenceChannel.subscribe(async (status) => {
+    await this.channel.subscribe((status, err) => {
+      console.error(`Broadcaster Signaling Channel: ${status} ${err ? err.message : ''}`);
+    });
+    await this.presenceChannel.subscribe(async (status, err) => {
+      console.error(`Broadcaster Presence Channel: ${status} ${err ? err.message : ''}`);
       if (status === 'SUBSCRIBED') {
         await this.presenceChannel.track({ isBroadcaster: true });
       }
@@ -73,13 +78,20 @@ export class Broadcaster {
       peer.addTrack(track, this.localStream);
     });
 
+    peer.oniceconnectionstatechange = () => {
+      console.error(`Broadcaster ICE State [${receiverId}]: ${peer.iceConnectionState}`);
+    };
+
     peer.onicecandidate = (event) => {
       if (event.candidate) {
+        console.error(`Broadcaster ICE Candidate generated for ${receiverId}`);
         this.channel.send({
           type: 'broadcast',
           event: 'webrtc',
           payload: { type: 'candidate', target: receiverId, sender: this.broadcasterId, candidate: event.candidate }
         });
+      } else {
+        console.error(`Broadcaster ICE Candidate generation complete for ${receiverId}`);
       }
     };
 
@@ -194,7 +206,9 @@ export class ReceiverManager {
           this.join();
         }
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        console.error(`Receiver Session Channel: ${status} ${err ? err.message : ''}`);
+      });
 
     this.channel = supabase.channel(`webrtc-${this.exerciseCode}`, {
       config: { broadcast: { self: false } }
@@ -214,7 +228,8 @@ export class ReceiverManager {
       }
     });
 
-    await this.channel.subscribe(async (status) => {
+    await this.channel.subscribe(async (status, err) => {
+      console.error(`Receiver WebRTC Channel: ${status} ${err ? err.message : ''}`);
       if (status === 'SUBSCRIBED') {
         this.join();
       }
@@ -243,13 +258,20 @@ export class ReceiverManager {
       }
     };
 
+    this.peer.oniceconnectionstatechange = () => {
+      console.error(`Receiver ICE State: ${this.peer.iceConnectionState}`);
+    };
+
     this.peer.onicecandidate = (event) => {
       if (event.candidate) {
+        console.error(`Receiver ICE Candidate generated`);
         this.channel.send({
           type: 'broadcast',
           event: 'webrtc',
           payload: { type: 'candidate', target: this.broadcasterId, sender: this.receiverId, candidate: event.candidate }
         });
+      } else {
+        console.error(`Receiver ICE Candidate generation complete`);
       }
     };
 

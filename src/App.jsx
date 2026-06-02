@@ -489,6 +489,10 @@ export function LiveSession() {
           exerciseCode={auth.code} 
           timelineData={timelineData} 
           isBroadcasterOnline={isBroadcasterOnline}
+          state={state}
+          exerciseTimeSecs={exerciseTimeSecs}
+          upcomingRPs={upcomingRPs}
+          formatCountdown={formatCountdown}
           onClose={() => setIsAssessorMode(false)}
         />
       )}
