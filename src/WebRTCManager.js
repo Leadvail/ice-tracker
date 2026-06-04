@@ -3,8 +3,20 @@ import { supabase } from './supabase';
 const ICE_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:global.stun.twilio.com:3478' }
-  ]
+    { urls: 'stun:stun1.l.google.com:19302' },
+    // Add free relay TURN entries to tunnel through strict station firewalls
+    {
+      urls: 'turn:global.relay.metered.ca:80',
+      username: 'metered',
+      credential: 'globalrelaypassword'
+    },
+    {
+      urls: 'turn:global.relay.metered.ca:443', // Port 443 easily bypasses firewalls
+      username: 'metered',
+      credential: 'globalrelaypassword'
+    }
+  ],
+  iceTransportPolicy: 'all'
 };
 
 
