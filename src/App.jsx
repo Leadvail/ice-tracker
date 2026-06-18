@@ -10,6 +10,13 @@ import AssessorModeOverlay from './AssessorModeOverlay';
 import { categoryMap } from './criteriaMap';
 import Login from './Login';
 import Layout from './Layout';
+import PortalLanding from './PortalLanding';
+import CreateAmendTrainingSpec from './CreateAmendTrainingSpec';
+import CompetencyFrameworkMatrix from './CompetencyFrameworkMatrix';
+import ObjectiveMatrix from './ObjectiveMatrix';
+import CoursePlanner from './CoursePlanner';
+import TFALanding from './TFALanding';
+import TFAWorkspace from './TFAWorkspace';
 
 function TimelineNode({ node, isFacilitator, state, exerciseTimeSecs }) {
   // Determine status
@@ -623,15 +630,23 @@ export default function App() {
           <Route path="*" element={<Login />} />
         ) : (
           /* Authenticated Routes */
-          <Route element={<Layout />}>
-            <Route path="/" element={<Navigate to="/join" replace />} />
-            <Route path="/login" element={<Navigate to="/join" replace />} />
-            <Route path="/join" element={<DashboardWrapper initialTab="join" />} />
-            <Route path="/library" element={<DashboardWrapper initialTab="library" />} />
-            <Route path="/admin" element={<TimelineBuilder />} />
-            <Route path="/session/:code/:role" element={<LiveSession />} />
-            <Route path="*" element={<Navigate to="/join" replace />} />
-          </Route>
+          <>
+            <Route path="/" element={<PortalLanding session={session} />} />
+            <Route path="/tfa-assessment" element={<TFALanding session={session} />} />
+            <Route path="/tfa-workspace/:objectiveId" element={<TFAWorkspace session={session} />} />
+            <Route path="/training-spec" element={<CreateAmendTrainingSpec session={session} />} />
+            <Route path="/competency-framework" element={<CompetencyFrameworkMatrix session={session} />} />
+            <Route path="/competency-framework/objective" element={<ObjectiveMatrix session={session} />} />
+            <Route path="/course-planner" element={<CoursePlanner session={session} />} />
+            <Route path="/login" element={<Navigate to="/" replace />} />
+            <Route element={<Layout />}>
+              <Route path="/join" element={<DashboardWrapper initialTab="join" />} />
+              <Route path="/library" element={<DashboardWrapper initialTab="library" />} />
+              <Route path="/admin" element={<TimelineBuilder />} />
+              <Route path="/session/:code/:role" element={<LiveSession />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </>
         )}
       </Routes>
     </BrowserRouter>
