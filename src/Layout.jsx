@@ -43,8 +43,6 @@ export default function Layout() {
     }
   };
 
-  // Only show Burger Menu if NOT on the primary Join landing page
-  const isWorkspace = location.pathname !== '/join' && location.pathname !== '/';
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -59,19 +57,17 @@ export default function Layout() {
         position: 'relative'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {isWorkspace && (
-            <button 
-              onClick={() => setMenuOpen(!menuOpen)}
-              style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.5rem', padding: '0 0.5rem 0 0' }}
-            >
-              ☰
-            </button>
-          )}
-          <h1 style={{ margin: 0, fontSize: '1.2rem', color: 'white' }}>ICE Master</h1>
+          <button 
+            onClick={() => setMenuOpen(!menuOpen)}
+            style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.5rem', padding: '0 0.5rem 0 0' }}
+          >
+            ☰
+          </button>
+          <h1 style={{ margin: 0, fontSize: '1.2rem', color: 'white' }}>ICE Director</h1>
         </div>
         
         {/* Dropdown Menu */}
-        {menuOpen && isWorkspace && (
+        {menuOpen && (
           <div style={{
             position: 'absolute',
             top: '100%',
@@ -82,11 +78,14 @@ export default function Layout() {
             boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
             zIndex: 1000,
             overflow: 'hidden',
-            minWidth: '200px',
+            minWidth: '220px',
             marginTop: '0.5rem'
           }}>
             <button onClick={() => { setMenuOpen(false); navigate('/join'); }} style={{ width: '100%', padding: '1rem', textAlign: 'left', background: 'none', border: 'none', borderBottom: '1px solid var(--border-color)', color: 'white', cursor: 'pointer' }}>
-              Dashboard Home
+              ICE Director Dashboard
+            </button>
+            <button onClick={() => { setMenuOpen(false); navigate('/'); }} style={{ width: '100%', padding: '1rem', textAlign: 'left', background: 'none', border: 'none', borderBottom: '1px solid var(--border-color)', color: 'white', cursor: 'pointer' }}>
+              Exit
             </button>
             <button onClick={handleLogout} style={{ width: '100%', padding: '1rem', textAlign: 'left', background: 'none', border: 'none', color: 'var(--color-red)', cursor: 'pointer' }}>
               Log Out

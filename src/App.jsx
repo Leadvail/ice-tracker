@@ -17,7 +17,8 @@ import ObjectiveMatrix from './ObjectiveMatrix';
 import CoursePlanner from './CoursePlanner';
 import TFALanding from './TFALanding';
 import TFAWorkspace from './TFAWorkspace';
-
+import AdminDashboard from './AdminDashboard';
+import UserProfile from './UserProfile';
 function TimelineNode({ node, isFacilitator, state, exerciseTimeSecs }) {
   // Determine status
   const isActive = state.activeNodeId === node.id;
@@ -357,6 +358,13 @@ export function LiveSession() {
     return () => clearInterval(interval);
   }, [state?.isClockRunning, state?.clockStartTime, session?.template?.start_clock_time]);
 
+  useEffect(() => {
+    if (error) {
+      alert("Incorrect Exercise Code - Please Check Code with Exercise Director");
+      navigate('/join');
+    }
+  }, [error, navigate]);
+
   if (!auth.code || !auth.role) {
     return <Navigate to="/join" />;
   }
@@ -370,13 +378,7 @@ export function LiveSession() {
   }
 
   if (error) {
-    return (
-      <div className="flex-col" style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-        <h2 style={{ color: 'var(--color-red)' }}>Error</h2>
-        <p>{error}</p>
-        <button className="btn btn-primary" onClick={() => navigate('/join')}>Back to Dashboard</button>
-      </div>
-    );
+    return null;
   }
 
   if (auth.role === 'assessor') {
@@ -461,6 +463,41 @@ export function LiveSession() {
             {isFacilitator ? 'Facilitator' : 'Viewer'}
           </div>
           <span className="code-text" style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Code: {auth.code}</span>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: '1rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tactical Mode:</span>
+              {isFacilitator ? (
+                <select 
+                  value={state.tacticalMode || 'Oscar'} 
+                  onChange={(e) => updateState({ tacticalMode: e.target.value })}
+                  style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-panel)', color: 'var(--text-main)', fontSize: '0.9rem', fontWeight: 600 }}
+                >
+                  <option value="Oscar">Oscar</option>
+                  <option value="Delta">Delta</option>
+                </select>
+              ) : (
+                <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.9rem' }}>{state.tacticalMode || 'Oscar'}</span>
+              )}
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600 }}>Incident Size:</span>
+              {isFacilitator ? (
+                <select 
+                  value={state.incidentSize || '6 Pumps'} 
+                  onChange={(e) => updateState({ incidentSize: e.target.value })}
+                  style={{ padding: '0.25rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-panel)', color: 'var(--text-main)', fontSize: '0.9rem', fontWeight: 600 }}
+                >
+                  {Array.from({ length: 35 }, (_, i) => i + 6).map(num => (
+                    <option key={num} value={`${num} Pumps`}>{num} Pumps</option>
+                  ))}
+                </select>
+              ) : (
+                <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.9rem' }}>{state.incidentSize || '6 Pumps'}</span>
+              )}
+            </div>
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
           
@@ -638,11 +675,13 @@ export default function App() {
             <Route path="/competency-framework" element={<CompetencyFrameworkMatrix session={session} />} />
             <Route path="/competency-framework/objective" element={<ObjectiveMatrix session={session} />} />
             <Route path="/course-planner" element={<CoursePlanner session={session} />} />
+            <Route path="/profile" element={<UserProfile session={session} />} />
             <Route path="/login" element={<Navigate to="/" replace />} />
             <Route element={<Layout />}>
               <Route path="/join" element={<DashboardWrapper initialTab="join" />} />
               <Route path="/library" element={<DashboardWrapper initialTab="library" />} />
-              <Route path="/admin" element={<TimelineBuilder />} />
+              <Route path="/admin" element={<AdminDashboard session={session} />} />
+              <Route path="/builder" element={<TimelineBuilder user={session?.user} />} />
               <Route path="/session/:code/:role" element={<LiveSession />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

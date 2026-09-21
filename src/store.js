@@ -7,6 +7,8 @@ const defaultState = {
   completedNodes: [],
   isClockRunning: false,
   clockStartTime: null,
+  tacticalMode: 'Oscar',
+  incidentSize: '6 Pumps',
 };
 
 let globalState = { ...defaultState };

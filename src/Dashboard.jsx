@@ -45,6 +45,8 @@ export default function Dashboard({ onLogin, initialTab = 'join' }) {
         completedNodes: [],
         isClockRunning: false,
         clockStartTime: null,
+        tacticalMode: 'Oscar',
+        incidentSize: '6 Pumps',
       }
     });
 
@@ -74,11 +76,11 @@ export default function Dashboard({ onLogin, initialTab = 'join' }) {
             onClick={() => { setTab('library'); setLaunchTemplate(null); }}
             style={{ flex: 1, padding: '1rem', background: 'none', border: 'none', color: tab === 'library' ? 'white' : 'var(--text-muted)', borderBottom: tab === 'library' ? '2px solid var(--color-blue)' : 'none', cursor: 'pointer', fontWeight: 'bold' }}
           >
-            Master Library
+            Exercise Library
           </button>
           <button 
             className="tab-btn" 
-            onClick={() => window.location.href = '/admin'}
+            onClick={() => window.location.href = '/builder'}
             style={{ flex: 1, padding: '1rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: 'bold' }}
           >
             Timeline Builder
@@ -110,7 +112,7 @@ export default function Dashboard({ onLogin, initialTab = 'join' }) {
         {tab === 'library' && !launchTemplate && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-              <h2>Master Library</h2>
+              <h2>Exercise Library</h2>
               <p style={{ color: 'var(--text-muted)' }}>Select an exercise template to run a new session.</p>
             </div>
             

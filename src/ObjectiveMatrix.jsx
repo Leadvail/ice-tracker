@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from './supabase';
+import Header from './Header';
+import Sidebar from './Sidebar';
 
 // Helper to parse query params
 function useQuery() {
@@ -187,37 +189,32 @@ export default function ObjectiveMatrix({ session }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#F9FAFB', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
       
-      {/* Top Header Bar */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0 2rem',
-        height: '60px',
-        backgroundColor: '#F9FAFB',
-        borderBottom: '2px solid #e9ecef',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-        zIndex: 10
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button onClick={() => navigate('/competency-framework')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#003399' }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-              <polyline points="9 22 9 12 15 12 15 22"></polyline>
-            </svg>
-          </button>
-          <h1 style={{ margin: 0, color: '#003399', fontSize: '1.4rem', fontWeight: 'bold', marginLeft: '0.5rem' }}>Competency Framework</h1>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ color: '#111827', fontSize: '0.95rem' }}>{userName}</span>
-          <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#dee2e6', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #ccc' }}>
-            <span style={{ fontSize: '1.3rem' }}>🧑‍🚒</span>
-          </div>
-        </div>
-      </div>
+      <Header />
 
-      {/* Breadcrumbs / Header Info */}
-      <div style={{ padding: '2rem 3rem', backgroundColor: '#fff', borderBottom: '1px solid #dee2e6' }}>
+      {/* Main Split Layout */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        
+        <Sidebar session={session} />
+
+        {/* Main Content Workspace */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#F9FAFB', overflowY: 'auto' }}>
+          
+          <div style={{ padding: '2rem' }}>
+            {/* Header Area */}
+            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <button onClick={() => navigate('/competency-framework')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#111827' }} title="Back to Competency Framework">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                  </svg>
+                </button>
+                <h1 style={{ margin: 0, fontSize: '1.8rem', color: '#111827', fontWeight: 700 }}>Competency Framework</h1>
+              </div>
+            </div>
+
+            {/* Breadcrumbs / Header Info */}
+            <div style={{ padding: '2rem', backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <div>
             <div style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>
@@ -230,8 +227,8 @@ export default function ObjectiveMatrix({ session }) {
               <div style={{ marginBottom: '0.5rem', fontSize: '1.1rem' }}>
                 <span style={{ fontWeight: 'bold', color: '#111827' }}>Learning Heading:</span> 
                 <span style={{ 
-                  color: outcomes[0].learning_heading.trim().toLowerCase() === 'knowledge and understanding' ? '#003399' : 
-                         outcomes[0].learning_heading.trim().toLowerCase() === 'practical application' ? '#001a4d' : '#374151',
+                  color: outcomes[0].learning_heading.trim().toLowerCase() === 'knowledge and understanding' ? '#111827' : 
+                         outcomes[0].learning_heading.trim().toLowerCase() === 'practical application' ? '#111827' : '#374151',
                   fontWeight: (outcomes[0].learning_heading.trim().toLowerCase() === 'knowledge and understanding' || 
                                outcomes[0].learning_heading.trim().toLowerCase() === 'practical application') ? 'bold' : 'normal',
                   marginLeft: '0.3rem'
@@ -247,19 +244,21 @@ export default function ObjectiveMatrix({ session }) {
                 disabled={!hasPrev}
                 style={{ 
                   background: 'none', border: 'none', cursor: hasPrev ? 'pointer' : 'default',
-                  color: hasPrev ? '#003399' : '#ccc', padding: '0', display: 'flex', alignItems: 'center'
+                  color: hasPrev ? '#111827' : '#ccc', padding: '0', display: 'flex', alignItems: 'center'
                 }}
+                title="Previous Objective"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
               </button>
-              <span style={{ color: '#d9480f', fontWeight: 'bold' }}>{objective.trim()}</span>
+              <span style={{ color: '#111827', fontWeight: 'bold' }}>{objective.trim()}</span>
               <button 
                 onClick={() => navigateToObjective(1)}
                 disabled={!hasNext}
                 style={{ 
                   background: 'none', border: 'none', cursor: hasNext ? 'pointer' : 'default',
-                  color: hasNext ? '#003399' : '#ccc', padding: '0', display: 'flex', alignItems: 'center'
+                  color: hasNext ? '#111827' : '#ccc', padding: '0', display: 'flex', alignItems: 'center'
                 }}
+                title="Next Objective"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </button>
@@ -272,7 +271,7 @@ export default function ObjectiveMatrix({ session }) {
       </div>
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto' }}>
+      <div>
         <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#111827', marginBottom: '1.5rem' }}>
           Learning Outcomes:
         </div>
@@ -329,14 +328,7 @@ export default function ObjectiveMatrix({ session }) {
         )}
       </div>
 
-      {/* Legend Footer */}
-      <div style={{ padding: '1.5rem', display: 'flex', justifyContent: 'center', gap: '3rem', backgroundColor: '#fff', borderTop: '1px solid #dee2e6' }}>
-        <div style={{ fontWeight: 'bold' }}>Key:</div>
-        <div style={{ color: '#005fcc', fontWeight: 'bold' }}>A = Acquired</div>
-        <div style={{ color: '#e67700', fontWeight: 'bold' }}>E = Enhanced</div>
-        <div style={{ color: '#2b8a3e', fontWeight: 'bold' }}>M = Maintained</div>
-        <div style={{ color: '#374151', fontWeight: 'bold' }}>X = Not Acquired</div>
-      </div>
+
 
       {/* Assignment Edit Modal */}
       {editingRow && (
@@ -465,6 +457,9 @@ export default function ObjectiveMatrix({ session }) {
         </div>
       )}
 
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

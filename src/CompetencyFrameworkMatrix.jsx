@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './supabase';
+import Header from './Header';
+import Sidebar from './Sidebar';
 
 export default function CompetencyFrameworkMatrix({ session }) {
   const navigate = useNavigate();
@@ -244,61 +246,45 @@ export default function CompetencyFrameworkMatrix({ session }) {
   }, [localFrameworkData, activeOutcomes, selectedPolicyId, selectedElement, sortMode]);
 
   const chevronIcon = (
-    <div style={{ color: '#003399', fontSize: '2.5rem', fontWeight: '300', display: 'flex', alignItems: 'center' }}>
+    <div style={{ color: '#9ca3af', fontSize: '2.5rem', fontWeight: '300', display: 'flex', alignItems: 'center' }}>
       &gt;
     </div>
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', backgroundColor: '#F9FAFB', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: '#F9FAFB', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
       
-      {/* Top Header Bar */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0 2rem',
-        height: '60px',
-        backgroundColor: '#F9FAFB',
-        borderBottom: '2px solid #e9ecef',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-        zIndex: 10
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#003399' }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-              <polyline points="9 22 9 12 15 12 15 22"></polyline>
-            </svg>
-          </button>
-          <h1 style={{ margin: 0, color: '#003399', fontSize: '1.4rem', fontWeight: 'bold', marginLeft: '0.5rem' }}>Competency Framework</h1>
-          
-          <div style={{ marginLeft: '1rem', color: '#e03131', fontStyle: 'italic', fontSize: '1.1rem' }}>
-            {notMappedCount} Learning outcomes not mapped
-          </div>
+      <Header />
 
-          <span style={{ fontSize: '1.6rem', color: '#003399', marginLeft: 'auto', paddingLeft: '2rem' }}>🌐</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ color: '#111827', fontSize: '0.95rem' }}>{userName}</span>
-          <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#dee2e6', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #ccc' }}>
-            <span style={{ fontSize: '1.3rem' }}>🧑‍🚒</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Layout Grid */}
-      <div style={{ padding: '1.5rem', boxSizing: 'border-box', height: 'calc(100vh - 60px)', overflow: 'hidden', display: 'flex', gap: '1.5rem' }}>
+      {/* Main Split Layout */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         
-        {/* Column 1: Policy Selector */}
-        <div style={{ flex: '1', display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', boxSizing: 'border-box', padding: '1rem' }}>
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={{ fontSize: '0.9rem', color: '#111827', marginBottom: '0.2rem' }}>Sort by:</div>
-            <select 
-              value={sortMode}
-              onChange={(e) => setSortMode(e.target.value)}
-              style={{ width: '100%', padding: '0.5rem', border: '2px solid #003399', color: '#003399', fontSize: '1rem', marginBottom: '0.5rem' }}
-            >
+        <Sidebar session={session} />
+
+        {/* Main Content Workspace */}
+        <div style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column', backgroundColor: '#F9FAFB', overflow: 'hidden' }}>
+          
+          {/* Header Area */}
+          <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h1 style={{ margin: 0, fontSize: '1.8rem', color: '#111827', fontWeight: 700 }}>Competency Framework</h1>
+            {notMappedCount > 0 && (
+              <div style={{ color: '#dc2626', fontWeight: 600, fontSize: '1rem', fontStyle: 'italic' }}>
+                {notMappedCount} Learning outcomes not mapped
+              </div>
+            )}
+          </div>
+          {/* Columns Area */}
+          <div style={{ display: 'flex', gap: '1.5rem', flex: 1, overflow: 'hidden' }}>
+            
+            {/* Column 1: Policy Selector */}
+            <div style={{ flex: '1', display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', boxSizing: 'border-box', padding: '1rem' }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <div style={{ fontSize: '0.9rem', color: '#111827', marginBottom: '0.2rem', fontWeight: 'bold' }}>Sort by:</div>
+                <select 
+                  value={sortMode}
+                  onChange={(e) => setSortMode(e.target.value)}
+                  style={{ width: '100%', padding: '0.5rem', border: '1px solid #111827', color: '#111827', fontSize: '1rem', marginBottom: '0.5rem', borderRadius: '4px' }}
+                >
               <option value="Training Specification">Training Specification</option>
               <option value="Course Code">Course Code</option>
               <option value="Not Mapped">Not Mapped</option>
@@ -336,7 +322,7 @@ export default function CompetencyFrameworkMatrix({ session }) {
                       padding: '0.75rem',
                       marginBottom: '0.5rem',
                       cursor: 'pointer',
-                      borderLeft: isActive ? '4px solid #003399' : '4px solid transparent',
+                      borderLeft: isActive ? '4px solid #111827' : '4px solid transparent',
                       borderBottom: '1px solid #f1f3f5',
                       backgroundColor: isActive ? '#F9FAFB' : 'transparent',
                     }}
@@ -356,7 +342,7 @@ export default function CompetencyFrameworkMatrix({ session }) {
         {chevronIcon}
 
         {/* Column 2: Learning Element (Hazard) */}
-        <div style={{ flex: '1', display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', boxSizing: 'border-box', padding: '1rem' }}>
+        <div style={{ flex: '1', display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', boxSizing: 'border-box', padding: '1rem' }}>
           <h2 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 'bold', color: '#111827' }}>Learning Element (Hazard):</h2>
           
           <div style={{ flexGrow: 1, overflowY: 'auto', paddingRight: '0.5rem' }} className="cinematic-scroll">
@@ -375,7 +361,7 @@ export default function CompetencyFrameworkMatrix({ session }) {
                       padding: '1rem 0.75rem',
                       marginBottom: '0.5rem',
                       cursor: 'pointer',
-                      borderLeft: isActive ? '4px solid #003399' : '4px solid transparent',
+                      borderLeft: isActive ? '4px solid #111827' : '4px solid transparent',
                       borderBottom: '1px solid #e9ecef',
                       backgroundColor: isActive ? '#F9FAFB' : 'transparent',
                       display: 'flex',
@@ -400,7 +386,7 @@ export default function CompetencyFrameworkMatrix({ session }) {
         {chevronIcon}
 
         {/* Column 3: Learning Objectives (Control Measures) */}
-        <div style={{ flex: '1', display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', boxSizing: 'border-box', padding: '1rem' }}>
+        <div style={{ flex: '1', display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', boxSizing: 'border-box', padding: '1rem' }}>
           <h2 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: 'bold', color: '#111827' }}>Learning Objectives (Control Measures):</h2>
           
           <div style={{ flexGrow: 1, overflowY: 'auto', paddingRight: '0.5rem' }} className="cinematic-scroll">
@@ -460,6 +446,8 @@ export default function CompetencyFrameworkMatrix({ session }) {
           </div>
         </div>
 
+          </div>
+        </div>
       </div>
 
       <style>

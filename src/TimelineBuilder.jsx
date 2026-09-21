@@ -271,12 +271,8 @@ export default function TimelineBuilder({ user, onLogout }) {
               <h3>{editingNode ? 'Edit Node' : 'Add New Node'}</h3>
               <form onSubmit={handleSaveNode} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div>
-                  <label>Node ID (e.g., 'inject-1')</label>
-                  <input className="input" value={formData.node_id} onChange={e => setFormData({...formData, node_id: e.target.value})} required />
-                </div>
-                <div>
                   <label>Title</label>
-                  <input className="input" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
+                  <input className="input" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value, node_id: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')})} required />
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <div style={{ flex: 1 }}>
@@ -288,14 +284,7 @@ export default function TimelineBuilder({ user, onLogout }) {
                     <input type="number" className="input" value={formData.length_mins} onChange={e => setFormData({...formData, length_mins: parseInt(e.target.value, 10)})} />
                   </div>
                 </div>
-                <div>
-                  <label>Node Type</label>
-                  <select className="input" value={formData.node_type} onChange={e => setFormData({...formData, node_type: e.target.value})}>
-                    <option value="node">Standard Node</option>
-                    <option value="branch">Branch</option>
-                    <option value="conditional">Conditional</option>
-                  </select>
-                </div>
+
                 <div>
                   <label>Details (Comma separated)</label>
                   <textarea className="input" value={formData.detail} onChange={e => setFormData({...formData, detail: e.target.value})} rows={3} />
