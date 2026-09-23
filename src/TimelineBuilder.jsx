@@ -127,7 +127,7 @@ export default function TimelineBuilder({ user, onLogout }) {
       detail: parseCSV(formData.detail),
       criteria: Array.isArray(formData.criteria) ? formData.criteria : parseCSV(formData.criteria),
       role_players: parseCSV(formData.role_players),
-      order_index: editingNode ? editingNode.order_index : nodes.length,
+      order_index: editingNode ? editingNode.order_index : (nodes.length > 0 ? Math.max(...nodes.map(n => n.order_index || 0)) + 1 : 0),
     };
 
     if (editingNode) {
@@ -148,6 +148,29 @@ export default function TimelineBuilder({ user, onLogout }) {
     }
 
     setEditingNode(null);
+  };
+
+  const handleMoveNode = async (index, direction) => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === nodes.length - 1) return;
+
+    const newNodes = [...nodes];
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    // Swap
+    const temp = newNodes[index];
+    newNodes[index] = newNodes[swapIndex];
+    newNodes[swapIndex] = temp;
+
+    // Optimistic UI (re-assign order_index based on new array order)
+    const updatedNodes = newNodes.map((n, i) => ({ ...n, order_index: i }));
+    setNodes(updatedNodes);
+
+    // Persist swapped pair to database
+    const nodeA = updatedNodes[index];
+    const nodeB = updatedNodes[swapIndex];
+    await supabase.from('timeline_nodes').update({ order_index: nodeA.order_index }).eq('id', nodeA.id);
+    await supabase.from('timeline_nodes').update({ order_index: nodeB.order_index }).eq('id', nodeB.id);
   };
 
   // When nodes update, and we are not editing, auto-fill the time
@@ -251,6 +274,8 @@ export default function TimelineBuilder({ user, onLogout }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <strong>{node.title} ({node.time})</strong>
                     <div>
+                      <button onClick={() => handleMoveNode(i, 'up')} disabled={i === 0} className="btn" style={{ padding: '0.2rem 0.5rem', marginRight: '0.25rem', fontSize: '0.8rem', backgroundColor: '#e5e7eb', color: i === 0 ? '#9ca3af' : '#111827', border: 'none', cursor: i === 0 ? 'not-allowed' : 'pointer' }}>↑</button>
+                      <button onClick={() => handleMoveNode(i, 'down')} disabled={i === nodes.length - 1} className="btn" style={{ padding: '0.2rem 0.5rem', marginRight: '0.5rem', fontSize: '0.8rem', backgroundColor: '#e5e7eb', color: i === nodes.length - 1 ? '#9ca3af' : '#111827', border: 'none', cursor: i === nodes.length - 1 ? 'not-allowed' : 'pointer' }}>↓</button>
                       <button onClick={() => handleEdit(node)} className="btn btn-primary" style={{ padding: '0.2rem 0.5rem', marginRight: '0.5rem', fontSize: '0.8rem' }}>Edit</button>
                       <button onClick={() => handleDelete(node.id)} className="btn btn-danger" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>Delete</button>
                     </div>
