@@ -72,9 +72,9 @@ export const useStore = (exerciseCode) => {
       const { data: sessionData, error } = await supabase
         .from('exercise_sessions')
         .select(`
-          state, candidate_name, assessor_1_name, assessor_2_name, scores,
+          state, candidate_name, assessor_1_name, assessor_2_name, scores, active_broadcaster_id,
           template_id,
-          exercise_templates ( start_clock_node_id, start_clock_time )
+          exercise_templates ( name, start_clock_node_id, start_clock_time )
         `)
         .eq('code', exerciseCode)
         .single();

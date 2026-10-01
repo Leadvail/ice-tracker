@@ -92,17 +92,19 @@ export default function TimelineBuilder({ user, onLogout }) {
     return '';
   };
 
-  const handleDeleteTemplate = async () => {
-    if (!selectedTemplate) return;
-    if (!window.confirm("Are you sure you want to delete this entire exercise and all its injects? This action cannot be undone.")) return;
+  const handleDeleteTemplate = async (templateToDelete) => {
+    if (!templateToDelete) return;
+    if (!window.confirm(`Are you sure you want to delete ${templateToDelete.name} and all its injects? This action cannot be undone.`)) return;
     
-    const { error } = await supabase.from('exercise_templates').delete().eq('id', selectedTemplate.id);
+    const { error } = await supabase.from('exercise_templates').delete().eq('id', templateToDelete.id);
     if (error) {
       alert("Error deleting template: " + error.message);
     } else {
-      setSelectedTemplate(null);
-      setNodes([]);
-      setClockSettings({ start_clock_time: '', start_clock_node_id: '' });
+      if (selectedTemplate?.id === templateToDelete.id) {
+        setSelectedTemplate(null);
+        setNodes([]);
+        setClockSettings({ start_clock_time: '', start_clock_node_id: '' });
+      }
       fetchTemplates();
     }
   };
@@ -206,65 +208,96 @@ export default function TimelineBuilder({ user, onLogout }) {
     fetchNodes(selectedTemplate.id);
   };
 
-  return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h2>Timeline Builder</h2>
-        {selectedTemplate && (
-          <button onClick={() => setSelectedTemplate(null)} className="btn btn-primary">Back</button>
-        )}
-      </header>
+  if (!selectedTemplate) {
+    return (
+      <div className="login-container">
+        <div className="card login-form" style={{ maxWidth: '600px', width: '100%' }}>
+          
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', marginBottom: '2rem' }}>
+            <button 
+              className="tab-btn" 
+              onClick={() => window.location.href = '/join'}
+              style={{ flex: 1, padding: '1rem', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              Available Exercises
+            </button>
+            <button 
+              className="tab-btn active" 
+              style={{ flex: 1, padding: '1rem', background: 'none', border: 'none', color: 'white', borderBottom: '2px solid var(--color-blue)', cursor: 'default', fontWeight: 'bold' }}
+            >
+              Timeline Builder
+            </button>
+          </div>
 
-      <div style={{ display: 'flex', gap: '2rem' }}>
-        {/* Left Col: Template Selection & Node List */}
-        <div style={{ flex: 1 }}>
-          <div className="card" style={{ marginBottom: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3>Select Template</h3>
-              <button className="btn" onClick={() => setShowNewTemplate(!showNewTemplate)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ textAlign: 'center', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0 }}>Select Template</h2>
+              <button className="btn btn-primary" onClick={() => setShowNewTemplate(!showNewTemplate)}>
                 {showNewTemplate ? 'Cancel' : '+ New Exercise'}
               </button>
             </div>
             
             {showNewTemplate ? (
-              <form onSubmit={handleCreateTemplate} style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <form onSubmit={handleCreateTemplate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <input className="input" placeholder="Exercise Name" value={newTemplateForm.name} onChange={e => setNewTemplateForm({...newTemplateForm, name: e.target.value})} required />
                 <input className="input" placeholder="Officer Rank (e.g., Station Commander)" value={newTemplateForm.officer_rank} onChange={e => setNewTemplateForm({...newTemplateForm, officer_rank: e.target.value})} required />
                 <textarea className="input" placeholder="Description..." value={newTemplateForm.description} onChange={e => setNewTemplateForm({...newTemplateForm, description: e.target.value})} rows={3} required />
                 <button type="submit" className="btn btn-primary">Create Exercise</button>
               </form>
             ) : (
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <select className="input" onChange={(e) => selectTemplate(templates.find(t => t.id === e.target.value))} value={selectedTemplate?.id || ''} style={{ flex: 1 }}>
-                  <option value="" disabled>-- Choose a template --</option>
-                  {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-                {selectedTemplate && (
-                  <button className="btn btn-danger" onClick={handleDeleteTemplate}>Delete Exercise</button>
-                )}
-              </div>
+              templates.length === 0 ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Loading templates...</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {templates.map(t => (
+                    <div key={t.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+                      <div>
+                        <h3 style={{ margin: '0 0 0.25rem 0' }}>{t.name}</h3>
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Rank: {t.officer_rank}</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="btn btn-primary" onClick={() => selectTemplate(t)}>Edit</button>
+                        <button className="btn btn-danger" onClick={async (e) => { e.stopPropagation(); await handleDeleteTemplate(t); }}>Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
             )}
           </div>
 
-          {selectedTemplate && !showNewTemplate && (
-            <div className="card" style={{ marginBottom: '2rem' }}>
-              <h3>Clock Settings</h3>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', alignItems: 'flex-end' }}>
-                <div style={{ flex: 1 }}>
-                  <label>Start Clocks Inject</label>
-                  <select className="input" value={clockSettings.start_clock_node_id} onChange={e => setClockSettings({...clockSettings, start_clock_node_id: e.target.value})}>
-                    <option value="">-- None --</option>
-                    {nodes.map(n => <option key={n.id} value={n.node_id}>{n.title || n.node_id}</option>)}
-                  </select>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label>Start Time (HH:MM)</label>
-                  <input className="input" placeholder="e.g. 15:22" value={clockSettings.start_clock_time} onChange={e => setClockSettings({...clockSettings, start_clock_time: e.target.value})} />
-                </div>
-                <button className="btn btn-primary" onClick={handleSaveClockSettings}>Save Settings</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h2>Timeline Builder - {selectedTemplate.name}</h2>
+        <button onClick={() => setSelectedTemplate(null)} className="btn btn-primary">Back to Library</button>
+      </header>
+
+      <div style={{ display: 'flex', gap: '2rem' }}>
+        {/* Left Col: Template Selection & Node List */}
+        <div style={{ flex: 1 }}>
+          <div className="card" style={{ marginBottom: '2rem' }}>
+            <h3>Clock Settings</h3>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', alignItems: 'flex-end' }}>
+              <div style={{ flex: 1 }}>
+                <label>Start Clocks Inject</label>
+                <select className="input" value={clockSettings.start_clock_node_id} onChange={e => setClockSettings({...clockSettings, start_clock_node_id: e.target.value})}>
+                  <option value="">-- None --</option>
+                  {nodes.map(n => <option key={n.id} value={n.node_id}>{n.title || n.node_id}</option>)}
+                </select>
               </div>
+              <div style={{ flex: 1 }}>
+                <label>Start Time (HH:MM)</label>
+                <input className="input" placeholder="e.g. 15:22" value={clockSettings.start_clock_time} onChange={e => setClockSettings({...clockSettings, start_clock_time: e.target.value})} />
+              </div>
+              <button className="btn btn-primary" onClick={handleSaveClockSettings}>Save Settings</button>
             </div>
-          )}
+          </div>
 
           {selectedTemplate && (
             <div className="card">

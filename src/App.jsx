@@ -49,7 +49,7 @@ function TimelineNode({ node, isFacilitator, state, exerciseTimeSecs }) {
   else if (isCompleted) stateClass = 'node-completed';
 
   let isDue = false;
-  if (node.time && !isCompleted && !isActive) {
+  if ((state.isClockRunning || state.clockStartTime) && node.time && !isCompleted && !isActive) {
     const parts = node.time.split(':');
     if (parts.length === 2) {
       const nodeSecs = parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60;
@@ -200,7 +200,7 @@ function SnippetView({ activeNode, visibleNodes, isFacilitator, state, exerciseT
             {activeNode.length > 0 && <div style={{ marginBottom: '1rem', color: 'var(--color-blue)', fontWeight: 'bold' }}>Inject Length: {activeNode.length} minutes</div>}
             <div className="snippet-content">
               <ul>
-                {activeNode.detail.map((line, idx) => (
+                {(activeNode.detail || []).map((line, idx) => (
                   <li key={idx}><strong>{line.split(':')[0]}</strong>{line.split(':')[1] ? `:${line.split(':')[1]}` : ''}</li>
                 ))}
               </ul>
@@ -272,7 +272,7 @@ function SnippetView({ activeNode, visibleNodes, isFacilitator, state, exerciseT
                           <h4 style={{ margin: 0, color: 'var(--text-main)' }}>{node.title} {node.time ? `(${node.time})` : ''}</h4>
                           {isDue && <span style={{ backgroundColor: 'var(--color-red)', color: 'white', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', animation: 'pulseActive 1.5s infinite' }}>DUE NOW</span>}
                         </div>
-                        <ul>{node.detail.slice(0, 2).map((d, idx) => <li key={idx}>{d}</li>)}</ul>
+                        <ul>{(node.detail || []).slice(0, 2).map((d, idx) => <li key={idx}>{d}</li>)}</ul>
                       </div>
                     );
                   } else if (un.type === 'branch') {
@@ -281,7 +281,7 @@ function SnippetView({ activeNode, visibleNodes, isFacilitator, state, exerciseT
                         <h4 style={{ color: 'var(--color-red)' }}>DECISION POINT</h4>
                         <ul>
                           {un.options.map(opt => (
-                            <li key={opt.id}><strong>{opt.title}:</strong> {opt.detail[1]}</li>
+                            <li key={opt.id}><strong>{opt.title}:</strong> {(opt.detail || [])[1]}</li>
                           ))}
                         </ul>
                       </div>
@@ -462,7 +462,7 @@ export function LiveSession() {
           <div className="role-badge" style={{ backgroundColor: isFacilitator ? 'var(--color-blue)' : 'var(--color-green)' }}>
             {isFacilitator ? 'Facilitator' : 'Viewer'}
           </div>
-          <span className="code-text" style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Code: {auth.code}</span>
+          <span className="code-text" style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Exercise: {session?.template?.name || auth.code}</span>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginLeft: '1rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
